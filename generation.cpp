@@ -1,19 +1,31 @@
 #include "Board.h"
+#include <algorithm>
+#include <functional>
+
+bool Board::invalid_move(uint64_t move_id)
+{
+	bool ret_val = false;
+	make_move(move_id);
+	if (in_check())
+	{
+		ret_val = true;
+	}
+	undo_move();
+
+	return ret_val;
+}
 
 int Board::generate_legal_moves()
 {
 	generate_all_moves();
-	for (auto i = moves.begin(); i != moves.end(); i++)
-	{
-		this->make_move(&(*i));
-		if (square_under_attack(__builtin_ffsll((white_to_move ? white_pieces[5] : black_pieces[5])) - 1, white_to_move))
-			;
-		{
-			this->undo_move();
-			moves.erase(i);
-		}
-	}
-	possible_moves_log.push_back(moves);
+
+	std::erase_if(moves, [this](uint64_t move_id)
+				  { return this->invalid_move(move_id); });
+
+	for (uint64_t move : moves)
+		std::cout << move << "\n";
+
+	possible_moves_log[move_index] = moves;
 
 	if (moves.empty())
 	{
@@ -59,7 +71,8 @@ void Board::generate_pawn_moves(bool white)
 		// Check if the pawn is on the correct rank for a double push
 		if (((pos / 8) == double_push_square) && (!(all_pieces & (1ULL << (pos + double_push_offset)))) && (!(all_pieces & (1ULL << (pos + push_offset)))))
 		{
-			moves.push_back(Move(pos, pos + double_push_offset, 0, piece_moved, -1, -1));
+			moves.push_back(Move::create_id(pos, pos + double_push_offset, 0, piece_moved, -1, -1));
+			en_passant_sq = pos + push_offset;
 		}
 		// Check if a pawn can push one square forward
 		if ((!(all_pieces & (1ULL << (pos + push_offset)))) && (white ? pos >= 8 : pos < 56))
@@ -68,12 +81,12 @@ void Board::generate_pawn_moves(bool white)
 			{
 				for (int i = 1; i < 5; i++)
 				{
-					moves.push_back(Move(pos, pos + push_offset, 0, piece_moved, -1, (white ? i : i + 6)));
+					moves.push_back(Move::create_id(pos, pos + push_offset, 0, piece_moved, -1, (white ? i : i + 6)));
 				}
 			}
 			else
 			{
-				moves.push_back(Move(pos, pos + push_offset, 0, piece_moved, -1, -1));
+				moves.push_back(Move::create_id(pos, pos + push_offset, 0, piece_moved, -1, -1));
 			}
 		}
 		// Pawn captures from specific attack table
@@ -96,12 +109,19 @@ void Board::generate_pawn_moves(bool white)
 			{
 				if (*(opp_piece + i) & (1ULL << pos_capture))
 				{
-					moves.push_back(Move(pos, pos_capture, 0, piece_moved, (white ? i + 6 : i), -1));
+					moves.push_back(Move::create_id(pos, pos_capture, 0, piece_moved, (white ? i + 6 : i), -1));
 					break;
 				}
 			}
 			temp_attack_table >>= capture_offset;
 		}
+		// En Passant
+		uint64_t opp_pawns = (white ? black_pieces[0] : white_pieces[0]);
+		if ((en_passant_sq != -1) && ((1ULL << en_passant_sq) & attack_tables_from[piece][pos]) && ((1ULL << (en_passant_sq + (white ? -8 : 8))) & opp_pawns))
+		{
+			moves.push_back(Move::create_id(pos, pos_capture, Move::EN_PASSANT_MOVE, piece_moved, (white ? 6 : 0), -1));
+		}
+
 		temp_val >>= offset;
 	}
 }
@@ -128,14 +148,14 @@ void Board::generate_knight_moves(bool white)
 			{
 				if ((1ULL << move_pos) & *(opp_piece + i))
 				{
-					moves.push_back(Move(pos, move_pos, 0, piece_moved, (white ? i + 6 : i), -1));
+					moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, (white ? i + 6 : i), -1));
 					capture = true;
 					break;
 				}
 			}
 			if (!(capture) && (!((1ULL << move_pos) & all_pieces)))
 			{
-				moves.push_back(Move(pos, move_pos, 0, piece_moved, -1, -1));
+				moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, -1, -1));
 			}
 			temp_attack_table >>= move_offset;
 		}
@@ -166,12 +186,12 @@ void Board::generate_bishop_moves(bool white, bool is_queen)
 				if ((1ULL << move_pos) & *(opp_piece + i))
 				{
 					capture = true;
-					moves.push_back(Move(pos, move_pos, 0, piece_moved, (white ? i : i + 6), -1));
+					moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, (white ? i : i + 6), -1));
 					break;
 				}
 			}
 			if (!(capture) && (!((1ULL << move_pos) & all_pieces)))
-				moves.push_back(Move(pos, move_pos, 0, piece_moved, -1, -1));
+				moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, -1, -1));
 
 			temp_attack_table >>= move_offset;
 		}
@@ -202,12 +222,12 @@ void Board::generate_rook_moves(bool white, bool is_queen)
 				if ((1ULL << move_pos) & *(opp_piece + i))
 				{
 					capture = true;
-					moves.push_back(Move(pos, move_pos, 0, piece_moved, (white ? i : i + 6), -1));
+					moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, (white ? i : i + 6), -1));
 					break;
 				}
 			}
 			if (!(capture) && (!((1ULL << move_pos) & all_pieces)))
-				moves.push_back(Move(pos, move_pos, 0, piece_moved, -1, -1));
+				moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, -1, -1));
 
 			temp_attack_table >>= move_offset;
 		}
@@ -245,25 +265,25 @@ void Board::generate_king_moves(bool white)
 			{
 				if ((1ULL << move_pos) & *(opp_piece + i))
 				{
-					moves.push_back(Move(pos, move_pos, 0, piece_moved, (white ? i + 6 : i), -1));
+					moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, (white ? i + 6 : i), -1));
 					capture = true;
 					break;
 				}
 			}
 			if (!(capture) && (!((1ULL << move_pos) & all_pieces)))
 			{
-				moves.push_back(Move(pos, move_pos, 0, piece_moved, -1, -1));
+				moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, -1, -1));
 			}
 			temp_attack_table >>= move_offset;
 		}
 
 		if (castle_king_side && (all_pieces & (1ULL << (pos + 1))) && (all_pieces & (1ULL << (pos + 2))))
 		{
-			moves.push_back(Move(pos, pos + 2, Move::CASTLE_MOVE, piece_moved, -1, -1));
+			moves.push_back(Move::create_id(pos, pos + 2, Move::CASTLE_MOVE, piece_moved, -1, -1));
 		}
 		if (castle_queen_side && (all_pieces & (1ULL << (pos - 1))) && (all_pieces & (1ULL << (pos - 2))) && (all_pieces & (1ULL << (pos - 3))))
 		{
-			moves.push_back(Move(pos, pos - 3, Move::CASTLE_MOVE, piece_moved, -1, -1));
+			moves.push_back(Move::create_id(pos, pos - 3, Move::CASTLE_MOVE, piece_moved, -1, -1));
 		}
 
 		temp_val >>= offset;
@@ -291,19 +311,4 @@ uint64_t Board::get_rook_attacks(int square, uint64_t occupancy)
 uint64_t Board::get_queen_attacks(int square, uint64_t occupancy)
 {
 	return get_bishop_attacks(square, occupancy) | get_rook_attacks(square, occupancy);
-}
-
-int Board::calculate_flags(Move *move)
-{
-	int flags;
-	if (move->piece_moved % 6 == 0 && (move->square_to / 8 == (move->piece_moved < 6 ? 1 : 6)))
-	{
-		flags |= Move::PROMOTION;
-	}
-	else if (move->piece_moved % 6 == 5 && ((move->square_to - move->square_from == 2) || (move->square_from - move->square_to == 3)))
-	{
-		flags |= Move::CASTLE_MOVE;
-	}
-
-	return flags;
 }

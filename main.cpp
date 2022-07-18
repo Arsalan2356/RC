@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 {
 
 	SDL_Init(SDL_INIT_EVERYTHING);
-	SDL_Window *window = SDL_CreateWindow("test", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_ALLOW_HIGHDPI);
+	SDL_Window *window = SDL_CreateWindow("test", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
 	if (window == NULL)
@@ -26,12 +26,14 @@ int main(int argc, char *argv[])
 	SDL_RenderClear(renderer);
 	int square_selected[2] = {-1, -1};
 	auto t1 = std::chrono::high_resolution_clock::now();
-	Board *board = new Board(renderer, "rnbqkbnr/ppp2ppp/8/8/8/2Ppp3/PPP1PPPP/RNBQKBNR w KQkq - 0 1");
+	Board *board = new Board(*renderer, "rnbqkbnr/ppp2ppp/8/8/8/2Ppp3/PPP1PPPP/RNBQKBNR w KQkq - 0 1");
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << ms_double.count() << "\n";
+
 	while (running)
 	{
+
 		if (SDL_PollEvent(&event))
 		{
 			switch (event.type)
@@ -57,15 +59,17 @@ int main(int argc, char *argv[])
 
 					if (square_selected[0] != -1 && square_selected[1] != -1)
 					{
+						std::cout << square_selected[0] << square_selected[1] << "\n";
 						if (square_selected[0] != square_selected[1])
 						{
 							Move move = Move(square_selected[0], square_selected[1]);
 
 							if (board->populate_move(&move))
 							{
-								if (board->check_validity(&move))
+								std::cout << "MoveID: " << move.move_id << "\n";
+								if (board->check_validity(move.move_id))
 								{
-									board->make_move(&move);
+									board->make_move(move.move_id);
 									board->generate_legal_moves();
 								}
 							}
@@ -99,8 +103,12 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderClear(renderer);
+
 		// Place the chess board along with pieces into the buffer
-		board->draw_board(SQUARE_SIZE);
+		board->draw_board(*renderer, SQUARE_SIZE);
+		board->draw_pieces(*renderer, SQUARE_SIZE);
 
 		// Update the window with everything stored in the buffer
 

@@ -1,7 +1,7 @@
 #include "Board.h"
 #include <sstream>
 
-void Board::draw_board(int square_size)
+void Board::draw_board(SDL_Renderer &renderer, int square_size)
 {
 	for (int pos = 0; pos < 64; pos++)
 	{
@@ -10,18 +10,17 @@ void Board::draw_board(int square_size)
 		SDL_Rect rect = {x * square_size, y * square_size, square_size, square_size};
 		if ((x + y) % 2 == 0)
 		{
-			SDL_SetRenderDrawColor(curr_renderer, 255, 255, 255, 255);
+			SDL_SetRenderDrawColor(&renderer, 255, 255, 255, 255);
 		}
 		else
 		{
-			SDL_SetRenderDrawColor(curr_renderer, 0, 102, 0, 255);
+			SDL_SetRenderDrawColor(&renderer, 0, 102, 0, 255);
 		}
-		SDL_RenderFillRect(curr_renderer, &rect);
+		SDL_RenderFillRect(&renderer, &rect);
 	}
-	draw_pieces(square_size);
 };
 
-void Board::draw_pieces(int square_size)
+void Board::draw_pieces(SDL_Renderer &renderer, int square_size)
 {
 	uint64_t temp_val;
 	int pos = -1;
@@ -39,7 +38,8 @@ void Board::draw_pieces(int square_size)
 			y = pos / 8;
 
 			SDL_Rect rect = {x * square_size, y * square_size, square_size, square_size};
-			SDL_RenderCopy(curr_renderer, piece_textures[i], NULL, &rect);
+			std::cout << &renderer << "\n";
+			SDL_RenderCopy(&renderer, piece_textures[i], NULL, &rect);
 			temp_val >>= offset;
 		}
 	}
@@ -59,7 +59,7 @@ void Board::draw_pieces(int square_size)
 			y = pos / 8;
 
 			SDL_Rect rect = {x * square_size, y * square_size, square_size, square_size};
-			SDL_RenderCopy(curr_renderer, piece_textures[piece_pos], NULL, &rect);
+			SDL_RenderCopy(&renderer, piece_textures[piece_pos], NULL, &rect);
 			temp_val >>= offset;
 		}
 	}

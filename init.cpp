@@ -4,16 +4,14 @@
 std::vector<std::string> split(const std::string &fen);
 int fen_to_sq(std::string fen);
 
-Board::Board(SDL_Renderer *renderer, const std::string &fen)
+Board::Board(SDL_Renderer &renderer, const std::string &fen)
 {
 	srand(time(0));
-
-	curr_renderer = renderer;
 
 	for (int i = 0; i < 12; i++)
 	{
 		std::string file_name = "./images/" + std::to_string(i) + ".png";
-		piece_textures[i] = IMG_LoadTexture(curr_renderer, file_name.c_str());
+		piece_textures[i] = IMG_LoadTexture(&renderer, file_name.c_str());
 	}
 
 	std::vector<std::string> v = split(fen);
@@ -128,7 +126,16 @@ Board::Board(SDL_Renderer *renderer, const std::string &fen)
 
 	half_moves = std::stoi(v[4]);
 
-	turn_number = std::stoi(v[5]);
+	move_index = std::stoi(v[5]) - 1;
+
+	for (int i = 0; i < 6; i++)
+	{
+		board_states[move_index][i] = white_pieces[i];
+		board_states[move_index][i + 6] = black_pieces[i];
+	}
+	board_states[move_index][12] = (white_to_move ? 1 : 0);
+	board_states[move_index][13] = castle_rights.to_ulong();
+	board_states[move_index][14] = en_passant_sq;
 
 	std::cout << "Computing attack tables for non-sliding pieces"
 			  << "\n";
@@ -149,7 +156,7 @@ Board::Board(SDL_Renderer *renderer, const std::string &fen)
 	generate_legal_moves();
 };
 
-Board::Board(SDL_Renderer *renderer) : Board::Board(renderer, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+Board::Board(SDL_Renderer &renderer) : Board::Board(renderer, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 {
 	return;
 }

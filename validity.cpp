@@ -10,6 +10,7 @@ bool Board::populate_move(Move *move)
 	move->piece_moved = -1;
 	move->piece_captured = -1;
 	move->flags = 0;
+	move->move_id = 0;
 	for (int i = 0; i < 6; i++)
 	{
 		if (move->piece_moved == -1 || move->piece_captured == -1)
@@ -54,15 +55,17 @@ bool Board::populate_move(Move *move)
 		move->piece_captured = (white_to_move ? 6 : 0);
 		move->flags |= Move::EN_PASSANT_MOVE;
 	}
+
+	move->move_id = (move->square_from | (move->square_to << 6) | (move->flags << 12) | (move->piece_moved << 15) | ((move->piece_captured + 1) << 19) | ((move->promotion_piece + 1) << 23));
 	return true;
 }
 
-bool Board::check_validity(Move *move)
+bool Board::check_validity(uint64_t move_id)
 {
 	for (auto i = moves.begin(); i != moves.end(); i++)
 	{
-		Move temp_move = *(&*i);
-		if (temp_move == (*move))
+		uint64_t move = *i;
+		if (move == (move_id))
 		{
 			return true;
 		}
@@ -70,15 +73,16 @@ bool Board::check_validity(Move *move)
 	return false;
 }
 
-void Board::make_move(Move *move)
+void Board::make_move(uint64_t move_id)
 {
-	int square_from = move->square_from;
-	int square_to = move->square_to;
-	int piece_moved = move->piece_moved;
+	Move move = Move(move_id);
+	int square_from = move.square_from;
+	int square_to = move.square_to;
+	int piece_moved = move.piece_moved;
 	uint64_t *pieces = (white_to_move ? white_pieces : black_pieces);
-	uint64_t *captured_pieces = (move->piece_captured < 6 ? white_pieces : black_pieces);
+	uint64_t *captured_pieces = (move.piece_captured < 6 ? white_pieces : black_pieces);
 
-	int piece_captured = move->piece_captured;
+	int piece_captured = move.piece_captured;
 
 	pieces[piece_moved] &= ~(1ULL << square_from);
 	pieces[piece_moved] |= (1ULL << square_to);
@@ -88,7 +92,18 @@ void Board::make_move(Move *move)
 	}
 
 	white_to_move = !white_to_move;
-	move_log.push_back(Move::clone(move));
+	move_index++;
+	for (int i = 0; i < 6; i++)
+	{
+		board_states[move_index][i] = white_pieces[i];
+		board_states[move_index][i + 6] = black_pieces[i];
+	}
+	board_states[move_index][12] = (white_to_move ? 1 : 0);
+	board_states[move_index][13] = castle_rights.to_ulong();
+	board_states[move_index][14] = en_passant_sq;
+
+	move_log[move_index] = move.move_id;
+	move_log_fen[move_index] = move.to_fen(3);
 	all_white_pieces = 0;
 	all_black_pieces = 0;
 	for (int i = 0; i < 6; i++)
@@ -101,37 +116,30 @@ void Board::make_move(Move *move)
 
 void Board::undo_move()
 {
-	Move move = move_log.back();
-	int square_from = move.square_from;
-	int square_to = move.square_to;
-	int piece_moved = move.piece_moved;
-	uint64_t *pieces = (white_to_move ? white_pieces : black_pieces);
-	uint64_t *captured_pieces = (move.piece_captured < 6 ? white_pieces : black_pieces);
-
-	int piece_captured = move.piece_captured;
-
-	pieces[piece_moved] |= (1ULL << square_from);
-	pieces[piece_moved] &= ~(1ULL << square_to);
-	if (piece_captured != -1)
+	if (move_index != 0)
 	{
-		captured_pieces[piece_captured] |= (1ULL << square_to);
-	}
+		move_log[move_index] = -1;
+		move_log_fen[move_index] = "";
+		move_index -= 1;
+		for (int i = 0; i < 6; i++)
+		{
+			white_pieces[i] = board_states[move_index][i];
+			black_pieces[i] = board_states[move_index][i + 6];
+		}
+		white_to_move = (board_states[move_index][12] == 1 ? true : false);
+		castle_rights = board_states[move_index][13];
+		en_passant_sq = board_states[move_index][14];
 
-	white_to_move = !white_to_move;
-	if (!move_log.empty())
-		move_log.pop_back();
-	if (!possible_moves_log.empty())
-		possible_moves_log.pop_back();
-
-	moves = possible_moves_log.back();
-	all_white_pieces = 0;
-	all_black_pieces = 0;
-	for (int i = 0; i < 6; i++)
-	{
-		all_white_pieces |= white_pieces[i];
-		all_black_pieces |= black_pieces[i];
+		moves = possible_moves_log[move_index];
+		all_white_pieces = 0;
+		all_black_pieces = 0;
+		for (int i = 0; i < 6; i++)
+		{
+			all_white_pieces |= white_pieces[i];
+			all_black_pieces |= black_pieces[i];
+		}
+		all_pieces = all_white_pieces | all_black_pieces;
 	}
-	all_pieces = all_white_pieces | all_black_pieces;
 }
 
 uint64_t Board::side_attack_squares(bool white)
@@ -152,7 +160,9 @@ bool Board::square_under_attack(int square, bool white)
 
 	uint64_t occupancy = all_pieces;
 
-	if (white)
+	// What squares white is attacking
+	// Check if black is in check here
+	if (!white)
 	{
 		if (attack_tables_from[3][square] & white_pieces[0])
 			return true;
@@ -167,6 +177,8 @@ bool Board::square_under_attack(int square, bool white)
 		if (attack_tables_from[2][square] & white_pieces[5])
 			return true;
 	}
+	// What squares black is attacking
+	// Check if white is in check here
 	else
 	{
 		if (attack_tables_from[0][square] & black_pieces[0])
@@ -187,5 +199,5 @@ bool Board::square_under_attack(int square, bool white)
 
 bool Board::in_check()
 {
-	return (square_under_attack(__builtin_ffsll((white_to_move ? white_pieces[5] : black_pieces[5])) - 1, white_to_move));
+	return (square_under_attack(__builtin_ffsll((white_to_move ? black_pieces[5] : white_pieces[5])) - 1, !white_to_move));
 }

@@ -27,9 +27,11 @@ public:
 
 	int move_id;
 
+	Move(uint64_t move_id);
 	Move(int square_from, int square_to);
 	Move(int square_from, int square_to, int flags, int piece_moved, int piece_captured, int promotion_piece);
 	std::string to_fen(int diff);
 	bool operator==(const Move &rhs);
 	static Move clone(Move *move);
+	static uint64_t create_id(int square_from, int square_to, int flags, int piece_moved, int piece_captured, int promotion_piece);
 };

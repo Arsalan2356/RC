@@ -32,10 +32,6 @@ private:
 	// PNBRQK
 	SDL_Texture *piece_textures[12];
 
-	// Renderer used to display the pieces
-	// and the board
-	SDL_Renderer *curr_renderer;
-
 	// Checks whose turn it is to move.
 	// True if white's turn and False if
 	// black's turn
@@ -51,8 +47,8 @@ private:
 	// or piece capture
 	int half_moves;
 
-	// Turn number, calculated by getting the length of the movelog
-	int turn_number;
+	// Move index
+	int move_index = 0;
 
 	// Attack tables for all pieces
 	// 0 for white pieces and 1 for black pieces
@@ -97,20 +93,28 @@ private:
 
 	int en_passant_sq = -1;
 
-	std::vector<Move> moves = {};
-	std::vector<Move> move_log = {};
-	std::vector<Move> move_log_fen = {};
+	std::vector<uint64_t> moves = {};
+	// 0 - 5 are white pieces
+	// 6 - 11 are black pieces
+	// 12 is current move (1 for white, 0 for black)
+	// 13 is castle rights as an integer (see castle rights for more info) (4 bit int)
+	// 14 is for en_passant index
+
+	uint64_t last_board_state[15];
+	uint64_t board_states[256][15];
+	uint64_t move_log[256];
+	std::string move_log_fen[256];
 
 public:
-	Board(SDL_Renderer *renderer);
-	Board(SDL_Renderer *renderer, const std::string &fen);
-	int calculate_flags(Move *move);
-	bool check_validity(Move *move);
+	Board(SDL_Renderer &renderer);
+	Board(SDL_Renderer &renderer, const std::string &fen);
+	bool invalid_move(uint64_t move_id);
+	bool check_validity(uint64_t move_id);
 	bool populate_move(Move *move);
-	void make_move(Move *move);
+	void make_move(uint64_t move_id);
 	void undo_move();
-	void draw_board(int square_size);
-	void draw_pieces(int square_size);
+	void draw_board(SDL_Renderer &renderer, int square_size);
+	void draw_pieces(SDL_Renderer &renderer, int square_size);
 	void compute_attack_tables();
 	void compute_sliding_tables();
 	uint64_t find_magic_number(int square, int relevant_bits, int flag);
@@ -138,7 +142,7 @@ public:
 	int get_piece(int square);
 	uint64_t bishop_mask(int sq);
 	uint64_t rook_mask(int sq);
-	std::vector<std::vector<Move>> possible_moves_log;
+	std::vector<uint64_t> possible_moves_log[1024];
 
 	uint64_t bishop_attacks_table[64][512] = {0};
 	uint64_t rook_attacks_table[64][4096] = {0};
