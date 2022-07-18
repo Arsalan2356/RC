@@ -1,7 +1,0 @@
-make.exe --dry-run --always-make --keep-going --print-directory
-make: Entering directory '/c/Users/Arsalan/Desktop/Coding Stuff/C++/Chess'
-g++ -mpopcnt -O3 -static-libgcc -static-libstdc++ -I src/include -L src/lib main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp -o ./bin/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
- 
-g++ -mpopcnt -g -ggdb -static-libgcc -static-libstdc++ -I src/include -L src/lib main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp -o ./debug/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
-make: Leaving directory '/c/Users/Arsalan/Desktop/Coding Stuff/C++/Chess'
- 
