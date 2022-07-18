@@ -1,0 +1,358 @@
+make.exe all --print-data-base --no-builtin-variables --no-builtin-rules --question
+# GNU Make 4.3
+ 
+# Built for x86_64-pc-msys
+# Copyright (C) 1988-2020 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+ 
+
+# Make data base, printed on Mon Jul 18 04:05:15 2022
+
+# Variables
+ 
+
+# environment
+FPS_BROWSER_APP_PROFILE_STRING = Internet Explorer
+# environment
+SYSTEMDRIVE = C:
+# environment
+LC_ALL = C
+# environment
+USERPROFILE = C:\Users\Arsalan
+# environment
+LOCALAPPDATA = C:\Users\Arsalan\AppData\Local
+# environment
+VSCODE_CWD = C:\Users\Arsalan\AppData\Local\Programs\Microsoft VS Code
+# environment
+SYSTEMROOT = C:\WINDOWS
+# environment
+PROCESSOR_LEVEL = 23
+# environment
+PSMODULEPATH = C:\Program Files\WindowsPowerShell\Modules;C:\WINDOWS\system32\WindowsPowerShell\v1.0\Modules
+# default
+MAKE_COMMAND := make
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# environment
+CHROME_CRASHPAD_PIPE_NAME = \\.\pipe\crashpad_18132_TAOIYDTWHRDRSQEX
+# environment
+FPS_BROWSER_USER_PROFILE_STRING = Default
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# default
+.VARIABLES := 
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# automatic
+%F = $(notdir $%)
+# environment
+VSCODE_CODE_CACHE_PATH = C:\Users\Arsalan\AppData\Roaming\Code\CachedData\b06ae3b2d2dbfe28bca3134cc6be65935cdfea6a
+# environment
+LANG = C
+# default
+.LOADED := 
+# environment
+TMP = /c/Users/Arsalan/AppData/Local/Temp
+# default
+.INCLUDE_DIRS = /usr/include /usr/include
+# makefile
+MAKEFLAGS = pqrR
+# environment
+ONEDRIVE = C:\Users\Arsalan\OneDrive
+# makefile
+CURDIR := /c/Users/Arsalan/Desktop/Coding Stuff/C++/Chess
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# environment
+PROGRAMFILES = C:\Program Files
+# environment
+MFLAGS = -pqrR
+# default
+.SHELLFLAGS := -c
+# environment
+!C: = c:\Users\Arsalan\Desktop\Coding Stuff\C++\Chess
+# environment
+COMMONPROGRAMW6432 = C:\Program Files\Common Files
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# makefile (from 'Makefile', line 1)
+MAKEFILE_LIST := Makefile
+# automatic
+@F = $(notdir $@)
+# environment
+VSCODE_PID = 18132
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# automatic
+*F = $(notdir $*)
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupport":true}
+# environment
+AMDRMPATH = C:\Program Files\AMD\RyzenMaster\
+# default
+MAKE_HOST := x86_64-pc-msys
+# environment
+PROGRAMDATA = C:\ProgramData
+# default
+SHELL := /bin/sh
+# environment
+HOMEPATH = \Users\Arsalan
+# default
+MAKECMDGOALS := all
+# environment
+DRIVERDATA = C:\Windows\System32\Drivers\DriverData
+# environment
+COMSPEC = C:\WINDOWS\system32\cmd.exe
+# environment
+WINDIR = C:\WINDOWS
+# environment
+ 
+MAKELEVEL := 0
+# default
+MAKE = $(MAKE_COMMAND)
+# environment
+PATH = /c/Program Files (x86)/Common Files/Oracle/Java/javapath:/c/WINDOWS/system32:/c/WINDOWS:/c/WINDOWS/System32/Wbem:/c/WINDOWS/System32/WindowsPowerShell/v1.0:/c/WINDOWS/System32/OpenSSH:/c/Program Files/NVIDIA Corporation/NVIDIA NvDLISR:/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/c/Program Files/dotnet:/c/WINDOWS/system32:/c/WINDOWS:/c/WINDOWS/System32/Wbem:/c/WINDOWS/System32/WindowsPowerShell/v1.0:/c/WINDOWS/System32/OpenSSH:/c/Program Files/Git/cmd:/c/Users/Arsalan/AppData/Local/Programs/Python/Python310/Scripts:/c/Users/Arsalan/AppData/Local/Programs/Python/Python310:/c/Users/Arsalan/AppData/Local/Microsoft/WindowsApps:/c/Users/Arsalan/AppData/Local/GitHubDesktop/bin:/c/Users/Arsalan/AppData/Local/Programs/Microsoft VS Code/bin:/c/Users/Arsalan/.dotnet/tools:/c/Users/Arsalan/AppData/Roaming/Python/Python310/Scripts:/mingw64/bin:/usr/bin:/d/Rnd/Dr.Memory/bin
+# environment
+COMPUTERNAME = DESKTOP-YA86GH
+# default
+MAKEFILES := 
+# automatic
+^F = $(notdir $^)
+# environment
+PROMPT = $P$G
+# environment
+LOGONSERVER = \\DESKTOP-YA86GH
+# environment
+USERNAME = Arsalan
+# makefile (from 'Makefile', line 1)
+FILES = main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp
+# environment
+COMMONPROGRAMFILES = C:\Program Files\Common Files
+# automatic
+?F = $(notdir $?)
+# environment
+PROGRAMW6432 = C:\Program Files
+# environment
+PATHEXT = .COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC
+# automatic
++F = $(notdir $+)
+# environment
+ORIGINAL_XDG_CURRENT_DESKTOP = undefined
+# environment
+USERDOMAIN = DESKTOP-YA86GH
+# 'override' directive
+GNUMAKEFLAGS := 
+# environment
+OS = Windows_NT
+# makefile
+.DEFAULT_GOAL := all
+# default
+MAKE_VERSION := 4.3
+# environment
+PROGRAMFILES(X86) = C:\Program Files (x86)
+# environment
+USERDOMAIN_ROAMINGPROFILE = DESKTOP-YA86GH
+# environment
+NUMBER_OF_PROCESSORS = 16
+# environment
+PUBLIC = C:\Users\Public
+# environment
+APPDATA = C:\Users\Arsalan\AppData\Roaming
+# environment
+HOMEDRIVE = C:
+# environment
+PROCESSOR_ARCHITECTURE = AMD64
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+HOME = /home/Arsalan
+# environment
+COMMONPROGRAMFILES(X86) = C:\Program Files (x86)\Common Files
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# environment
+TEMP = /c/Users/Arsalan/AppData/Local/Temp
+# environment
+VSCODE_IPC_HOOK = \\.\pipe\356d5dff76332575e6bafd647c0767e8-1.69.1-main-sock
+# environment
+TERM = xterm-256color
+# default
+.RECIPEPREFIX := 
+# automatic
+<F = $(notdir $<)
+# default
+SUFFIXES := 
+# environment
+ALLUSERSPROFILE = C:\ProgramData
+# environment
+SESSIONNAME = Console
+# default
+.FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell nocomment grouped-target extra-prereqs archives jobserver output-sync check-symlink load
+# environment
+PROCESSOR_REVISION = 7100
+# environment
+PROCESSOR_IDENTIFIER = AMD64 Family 23 Model 113 Stepping 0, AuthenticAMD
+# variable set hash-table stats:
+# Load=93/1024=9%, Rehash=0, Collisions=12/126=10%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+ 
+# Directories
+
+# . (device 714866401, inode 62205969853058281): 20 files, no impossibilities.
+
+# 20 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+# Not a target:
+generation.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-18 03:58:30.2911856
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+validity.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-18 04:00:46.3677466
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+board_draw.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-17 22:05:19.2736044
+#  File has been updated.
+#  Successfully updated.
+
+debug: main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 12):
+	g++ -mpopcnt -g -ggdb -static-libgcc -static-libstdc++ -I src/include -L src/lib $(FILES) -o ./debug/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-17 21:57:47.3661368
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+all: release debug
+#  Command line target.
+#  Implicit rule search has been done.
+#  File does not exist.
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/4=0%
+
+# Not a target:
+main.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-18 04:00:52.3642302
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+Move.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-18 00:29:11.9890646
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+init.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-18 00:18:54.9096565
+#  File has been updated.
+#  Successfully updated.
+
+release: main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp
+#  Implicit rule search has not been done.
+#  Implicit/static pattern stem: ''
+#  File does not exist.
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# automatic
+# @ := release
+# automatic
+# * := 
+ 
+# automatic
+# < := main.cpp
+# automatic
+# + := main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp
+# automatic
+# % := 
+# automatic
+# ^ := main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp
+# automatic
+# ? := main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp
+# automatic
+# | := 
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=1/12=8%
+#  recipe to execute (from 'Makefile', line 7):
+	g++ -mpopcnt -O3 -static-libgcc -static-libstdc++ -I src/include -L src/lib $(FILES) -o ./bin/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+
+# Not a target:
+.SUFFIXES:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+magic.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-17 21:58:04.6068058
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+compute_tables.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-17 19:56:16.3537348
+#  File has been updated.
+#  Successfully updated.
+
+# files hash-table stats:
+# Load=14/1024=1%, Rehash=0, Collisions=0/46=0%
+# VPATH Search Paths
+
+# No 'vpath' search paths.
+
+# No general ('VPATH' variable) search path.
+
+# strcache buffers: 1 (0) / strings = 25 / storage = 225 B / avg = 9 B
+# current buf: size = 8162 B / used = 225 B / count = 25 / avg = 9 B
+
+# strcache performance: lookups = 53 / hit rate = 52%
+# hash-table stats:
+# Load=25/8192=0%, Rehash=0, Collisions=0/53=0%
+# Finished Make data base on Mon Jul 18 04:05:15 2022
+
+ 
