@@ -13,24 +13,14 @@ private:
 	// So, 0 in the bitset maps to square A8 on the board and
 	// 63 in the bitset maps to square H1
 
-	// Stores the bitsets of all white pieces
-	// The order they are stored in is PNBRQK (0 - 5)
-	uint64_t white_pieces[6];
 	uint64_t all_white_pieces;
-	// Stores the bitsets of all black pieces
-	// The order they are stored in is PNBRQK (0 - 5)
-	uint64_t black_pieces[6];
+
 	uint64_t all_black_pieces;
 
 	// Stores the bitset that shows all occupied squares
 	// This is used as an occupancy for the bishops
 	// and rooks
 	uint64_t all_pieces;
-
-	// Textures of the pieces, (0 - 5) are the white pieces,
-	// (6 - 11) are the black pieces, both are in the order
-	// PNBRQK
-	SDL_Texture *piece_textures[12];
 
 	// Checks whose turn it is to move.
 	// True if white's turn and False if
@@ -106,15 +96,12 @@ private:
 	std::string move_log_fen[256];
 
 public:
-	Board(SDL_Renderer &renderer);
-	Board(SDL_Renderer &renderer, const std::string &fen);
+	Board(std::string &fen);
 	bool invalid_move(uint64_t move_id);
 	bool check_validity(uint64_t move_id);
 	bool populate_move(Move *move);
 	void make_move(uint64_t move_id);
 	void undo_move();
-	void draw_board(SDL_Renderer &renderer, int square_size);
-	void draw_pieces(SDL_Renderer &renderer, int square_size);
 	void compute_attack_tables();
 	void compute_sliding_tables();
 	uint64_t find_magic_number(int square, int relevant_bits, int flag);
@@ -149,4 +136,12 @@ public:
 	uint64_t bishop_magic_numbers[64] = {0};
 	uint64_t rook_magic_numbers[64] = {0};
 	bool white_to_move;
+
+	// Stores the bitsets of all white pieces
+	// The order they are stored in is PNBRQK (0 - 5)
+	uint64_t white_pieces[6];
+
+	// Stores the bitsets of all black pieces
+	// The order they are stored in is PNBRQK (0 - 5)
+	uint64_t black_pieces[6];
 };

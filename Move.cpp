@@ -27,7 +27,7 @@ Move::Move(int square_from, int square_to, int flags, int piece_moved, int piece
 {
 	this->square_from = square_from;
 	this->square_to = square_to;
-	// Checks for promotion
+	// Checks for promotion, en_passant, and castling
 	this->flags = flags;
 	this->piece_moved = piece_moved;
 	this->piece_captured = piece_captured;

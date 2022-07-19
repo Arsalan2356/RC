@@ -1,18 +1,12 @@
 #include "Board.h"
-#include <SDL2/SDL_image.h>
+#include <sstream>
 
-std::vector<std::string> split(const std::string &fen);
+std::vector<std::string> split(std::string &fen);
 int fen_to_sq(std::string fen);
 
-Board::Board(SDL_Renderer &renderer, const std::string &fen)
+Board::Board(std::string &fen)
 {
 	srand(time(0));
-
-	for (int i = 0; i < 12; i++)
-	{
-		std::string file_name = "./images/" + std::to_string(i) + ".png";
-		piece_textures[i] = IMG_LoadTexture(&renderer, file_name.c_str());
-	}
 
 	std::vector<std::string> v = split(fen);
 	int pos = 0;
@@ -112,7 +106,7 @@ Board::Board(SDL_Renderer &renderer, const std::string &fen)
 
 	all_pieces = all_white_pieces | all_black_pieces;
 
-	white_to_move = (v[1] == "w");
+	white_to_move = (strcmp(v[1].c_str(), "w") == 0);
 
 	castle_rights.set(0, ((v[2].find("K") != std::string::npos)));
 	castle_rights.set(1, ((v[2].find("Q") != std::string::npos)));
@@ -156,11 +150,6 @@ Board::Board(SDL_Renderer &renderer, const std::string &fen)
 	generate_legal_moves();
 };
 
-Board::Board(SDL_Renderer &renderer) : Board::Board(renderer, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-{
-	return;
-}
-
 int fen_to_sq(std::string fen)
 {
 	int rank = (int)(8 - (fen[1] - '0'));
@@ -180,4 +169,16 @@ int Board::get_piece(int square)
 		}
 	}
 	return -1;
+}
+
+std::vector<std::string> split(std::string &fen)
+{
+	std::vector<std::string> v;
+	std::string buf;
+	std::stringstream ss(fen);
+	while (ss >> buf)
+	{
+		v.push_back(buf);
+	}
+	return v;
 }

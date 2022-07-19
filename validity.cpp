@@ -45,7 +45,7 @@ bool Board::populate_move(Move *move)
 
 	move->promotion_piece = promotion_piece;
 
-	if (move->piece_moved % 6 == 5 && ((move->square_to - move->square_from == 2) || move->square_from - move->square_to == 3))
+	if (move->piece_moved % 6 == 5 && ((move->square_to - move->square_from == 2) || move->square_from - move->square_to == 2))
 	{
 		move->flags |= Move::CASTLE_MOVE;
 	}
@@ -78,17 +78,171 @@ void Board::make_move(uint64_t move_id)
 	Move move = Move(move_id);
 	int square_from = move.square_from;
 	int square_to = move.square_to;
-	int piece_moved = move.piece_moved;
+	int piece_moved = (white_to_move ? move.piece_moved : move.piece_moved - 6);
+	int flags = move.flags;
 	uint64_t *pieces = (white_to_move ? white_pieces : black_pieces);
 	uint64_t *captured_pieces = (move.piece_captured < 6 ? white_pieces : black_pieces);
 
 	int piece_captured = move.piece_captured;
 
+	int diff = 0;
+	uint64_t temp_val = pieces[piece_moved];
+	int pos = -1;
+	int rank_diff = -1;
+	int file_diff = -1;
+	while (temp_val != 0)
+	{
+		int offset = __builtin_ffsll(temp_val);
+		pos += offset;
+		if (pos != square_from)
+		{
+			uint64_t attacks = 0ULL;
+			if (piece_moved < 6)
+			{
+				if (piece_moved == 2 || piece_moved == 3 || piece_moved == 4)
+				{
+					if (piece_moved == 2)
+					{
+						attacks = get_bishop_attacks(pos, all_pieces);
+					}
+					else if (piece_moved == 3)
+					{
+						attacks = get_rook_attacks(pos, all_pieces);
+					}
+					else
+					{
+						attacks = get_queen_attacks(pos, all_pieces);
+					}
+				}
+				else
+				{
+					if (piece_moved == 0)
+					{
+						attacks = attack_tables_from[0][pos];
+					}
+					else if (piece_moved == 1)
+					{
+						attacks = attack_tables_from[1][pos];
+					}
+					else
+					{
+						attacks = attack_tables_from[2][pos];
+					}
+				}
+			}
+			else
+			{
+				if (piece_moved == 2 || piece_moved == 3 || piece_moved == 4)
+				{
+					if (piece_moved == 2)
+					{
+						attacks = get_bishop_attacks(pos, all_pieces);
+					}
+					else if (piece_moved == 3)
+					{
+						attacks = get_rook_attacks(pos, all_pieces);
+					}
+					else
+					{
+						attacks = get_queen_attacks(pos, all_pieces);
+					}
+				}
+				else
+				{
+					if (piece_moved == 0)
+					{
+						attacks = attack_tables_from[3][pos];
+					}
+					else if (piece_moved == 1)
+					{
+						attacks = attack_tables_from[1][pos];
+					}
+					else
+					{
+						attacks = attack_tables_from[2][pos];
+					}
+				}
+			}
+
+			if (attacks & (1ULL << square_to))
+			{
+				if (pos % 8 != square_from % 8 && pos / 8 == square_from / 8)
+				{
+					file_diff = 1;
+				}
+				else if (pos / 8 != square_from / 8 && pos % 8 == square_from % 8)
+				{
+					rank_diff = 1;
+				}
+			}
+		}
+		temp_val >>= offset;
+	}
+
+	if (rank_diff == 1 && file_diff == 1)
+	{
+		diff = 3;
+	}
+	else
+	{
+		if (file_diff == 1)
+		{
+			diff = 1;
+		}
+		else if (rank_diff == 1)
+		{
+			diff = 2;
+		}
+	}
+
 	pieces[piece_moved] &= ~(1ULL << square_from);
-	pieces[piece_moved] |= (1ULL << square_to);
+
+	if (flags & Move::PROMOTION)
+	{
+		pieces[move.promotion_piece] |= (1ULL << square_to);
+	}
+	else
+	{
+		pieces[piece_moved] |= (1ULL << square_to);
+		// King already moves to the correct square
+		if (flags & Move::CASTLE_MOVE)
+		{
+			// Check if kingside/queenside castle
+			// Kingside castle
+			// Rook is + 3 from the king here
+			// King's end square is 1 behind of the rook
+			// So rook's starting pos is square_to + 1
+			// Rook's ending pos is square_to - 1
+			if (square_to - square_from == 2)
+			{
+				pieces[(piece_moved < 6 ? 3 : 9)] &= ~(1ULL << (square_to + 1));
+				pieces[(piece_moved < 6 ? 3 : 9)] |= (1ULL << (square_to - 1));
+				castle_rights.set((piece_moved < 6 ? 0 : 2), false);
+			}
+			// Queenside castle
+			else
+			{
+				// Rook is - 4 from the king here
+				// King's end square is 2 ahead of the rook
+				// So rook's starting pos is square_to - 2
+				// Rook's ending pos is square_to + 1
+				pieces[(piece_moved < 6 ? 3 : 9)] &= ~(1ULL << (square_to - 2));
+				pieces[(piece_moved < 6 ? 3 : 9)] |= (1ULL << (square_to + 1));
+				castle_rights.set((piece_moved < 6 ? 1 : 3), false);
+			}
+		}
+	}
+
 	if (piece_captured != -1)
 	{
-		captured_pieces[piece_captured % 6] &= ~(1ULL << square_to);
+		if (flags & Move::EN_PASSANT_MOVE)
+		{
+			captured_pieces[piece_captured % 6] &= ~(1ULL << (square_to + (piece_moved < 6 ? -8 : 8)));
+		}
+		else
+		{
+			captured_pieces[piece_captured % 6] &= ~(1ULL << square_to);
+		}
 	}
 
 	white_to_move = !white_to_move;
@@ -103,7 +257,7 @@ void Board::make_move(uint64_t move_id)
 	board_states[move_index][14] = en_passant_sq;
 
 	move_log[move_index] = move.move_id;
-	move_log_fen[move_index] = move.to_fen(3);
+	move_log_fen[move_index] = move.to_fen(diff);
 	all_white_pieces = 0;
 	all_black_pieces = 0;
 	for (int i = 0; i < 6; i++)

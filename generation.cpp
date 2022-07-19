@@ -18,14 +18,21 @@ bool Board::invalid_move(uint64_t move_id)
 int Board::generate_legal_moves()
 {
 	generate_all_moves();
-
-	std::erase_if(moves, [this](uint64_t move_id)
-				  { return this->invalid_move(move_id); });
-
-	for (uint64_t move : moves)
-		std::cout << move << "\n";
-
+	std::vector<uint64_t> valid_moves;
+	// TODO
+	// Figure out why erase_if and remove_if don't work with this
+	// Temp solution works
+	for (auto &element : moves)
+	{
+		if (!invalid_move(element))
+		{
+			valid_moves.push_back(element);
+		}
+	}
+	moves.clear();
+	moves.assign(valid_moves.begin(), valid_moves.end());
 	possible_moves_log[move_index] = moves;
+	valid_moves.clear();
 
 	if (moves.empty())
 	{
@@ -81,7 +88,7 @@ void Board::generate_pawn_moves(bool white)
 			{
 				for (int i = 1; i < 5; i++)
 				{
-					moves.push_back(Move::create_id(pos, pos + push_offset, 0, piece_moved, -1, (white ? i : i + 6)));
+					moves.push_back(Move::create_id(pos, pos + push_offset, Move::PROMOTION, piece_moved, -1, (white ? i : i + 6)));
 				}
 			}
 			else
@@ -186,7 +193,7 @@ void Board::generate_bishop_moves(bool white, bool is_queen)
 				if ((1ULL << move_pos) & *(opp_piece + i))
 				{
 					capture = true;
-					moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, (white ? i : i + 6), -1));
+					moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, (white ? i + 6 : i), -1));
 					break;
 				}
 			}
@@ -222,7 +229,7 @@ void Board::generate_rook_moves(bool white, bool is_queen)
 				if ((1ULL << move_pos) & *(opp_piece + i))
 				{
 					capture = true;
-					moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, (white ? i : i + 6), -1));
+					moves.push_back(Move::create_id(pos, move_pos, 0, piece_moved, (white ? i + 6 : i), -1));
 					break;
 				}
 			}
@@ -277,13 +284,13 @@ void Board::generate_king_moves(bool white)
 			temp_attack_table >>= move_offset;
 		}
 
-		if (castle_king_side && (all_pieces & (1ULL << (pos + 1))) && (all_pieces & (1ULL << (pos + 2))))
+		if (castle_king_side && (!(all_pieces & (1ULL << (pos + 1)))) && (!(all_pieces & (1ULL << (pos + 2)))))
 		{
 			moves.push_back(Move::create_id(pos, pos + 2, Move::CASTLE_MOVE, piece_moved, -1, -1));
 		}
-		if (castle_queen_side && (all_pieces & (1ULL << (pos - 1))) && (all_pieces & (1ULL << (pos - 2))) && (all_pieces & (1ULL << (pos - 3))))
+		if (castle_queen_side && (!(all_pieces & (1ULL << (pos - 1)))) && (!(all_pieces & (1ULL << (pos - 2)))) && (!(all_pieces & (1ULL << (pos - 3)))))
 		{
-			moves.push_back(Move::create_id(pos, pos - 3, Move::CASTLE_MOVE, piece_moved, -1, -1));
+			moves.push_back(Move::create_id(pos, pos - 2, Move::CASTLE_MOVE, piece_moved, -1, -1));
 		}
 
 		temp_val >>= offset;

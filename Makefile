@@ -1,4 +1,4 @@
-FILES = main.cpp validity.cpp generation.cpp init.cpp board_draw.cpp compute_tables.cpp magic.cpp Move.cpp
+FILES = main.cpp validity.cpp generation.cpp init.cpp compute_tables.cpp magic.cpp Move.cpp
 
 all: release debug
 
