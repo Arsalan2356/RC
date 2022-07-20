@@ -1,10 +1,10 @@
-FILES = main.cpp validity.cpp generation.cpp init.cpp compute_tables.cpp magic.cpp Move.cpp
+FILES = main.cpp validity.cpp generation.cpp init.cpp compute_tables.cpp magic.cpp perft.cpp Move.cpp
 
 all: release debug
 
 
 release: $(FILES)
-	g++ -std=c++20 -Wall -Wextra -mpopcnt -O3 -static-libgcc -static-libstdc++ -I src/include -L src/lib $(FILES) -o ./bin/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+	g++ -std=c++20 -Wall -Wextra -mpopcnt -Ofast -static-libgcc -static-libstdc++ -I src/include -L src/lib $(FILES) -o ./bin/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
 
 
 

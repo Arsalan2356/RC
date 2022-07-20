@@ -10,10 +10,12 @@ Move::Move(uint64_t move_id)
 {
 	this->square_from = (move_id & 0x3f);
 	this->square_to = (move_id & 0xfc0) >> 6;
-	this->flags = (move_id & 0x7000) >> 12;
-	this->piece_moved = (move_id & 0x78000) >> 15;
-	this->piece_captured = ((move_id & 0x780000) >> 19) - 1;
-	this->promotion_piece = ((move_id & 0x7800000) >> 23) - 1;
+	this->piece = (move_id & 0xf000) >> 12;
+	this->promoted = (move_id & 0xf0000) >> 16;
+	this->capture_flag = (move_id & 0x100000);
+	this->double_flag = (move_id & 0x200000);
+	this->en_passant_flag = (move_id & 0x400000);
+	this->castle_flag = (move_id & 0x800000);
 	this->move_id = move_id;
 }
 
@@ -23,22 +25,18 @@ Move::Move(int square_from, int square_to)
 	this->square_to = square_to;
 }
 
-Move::Move(int square_from, int square_to, int flags, int piece_moved, int piece_captured, int promotion_piece)
+Move::Move(int square_from, int square_to, int piece, int promoted, int capture_flag, int double_flag, int en_passant_flag, int castle_flag)
 {
 	this->square_from = square_from;
 	this->square_to = square_to;
 	// Checks for promotion, en_passant, and castling
-	this->flags = flags;
-	this->piece_moved = piece_moved;
-	this->piece_captured = piece_captured;
-	this->promotion_piece = promotion_piece;
-	// square_from bits (0 - 5)
-	// square_to bits (6 - 11)
-	// flags (12 - 14)
-	// piece_moved (15 - 18)
-	// piece_captured (19 - 22)
-	// promotion_piece (23 - 26)
-	this->move_id = (square_from | (square_to << 6) | (flags << 12) | (piece_moved << 15) | ((piece_captured + 1) << 19) | ((promotion_piece + 1) << 23));
+	this->piece = piece;
+	this->promoted = promoted;
+	this->capture_flag = capture_flag;
+	this->double_flag = double_flag;
+	this->en_passant_flag = en_passant_flag;
+	this->castle_flag = castle_flag;
+	this->move_id = (square_from) | (square_to << 6) | (piece << 12) | (promoted << 16) | (capture_flag << 20) | (double_flag << 21) | (en_passant_flag << 22) | (castle_flag << 23);
 }
 
 // diff defines whether a rank/file/position needs to specified when the move
@@ -46,11 +44,11 @@ Move::Move(int square_from, int square_to, int flags, int piece_moved, int piece
 std::string Move::to_fen(int diff)
 {
 	std::string fen = "";
-	if (!(flags & CASTLE_MOVE))
+	if (!(castle_flag))
 	{
-		if (piece_moved % 6 != 0)
+		if (piece % 6 != 0)
 		{
-			fen += piece_names(piece_moved);
+			fen += piece_names(piece);
 			if (diff == 1)
 				fen += (char)(square_from % 8 + 97);
 			else if (diff == 2)
@@ -62,16 +60,16 @@ std::string Move::to_fen(int diff)
 			}
 		}
 
-		if (piece_captured != -1)
+		if (capture_flag)
 		{
-			if (piece_moved % 6 == 0)
+			if (piece % 6 == 0)
 				fen += (char)(square_from % 8 + 97);
 			fen += "x";
 		}
 		fen += ((char)((square_to % 8) + 97));
 		fen += ((char)((8 - (square_to / 8)) + 48));
-		if (piece_moved == 0 && (flags & PROMOTION))
-			fen += "=" + piece_names(promotion_piece);
+		if (piece == 0 && (promoted != 0))
+			fen += "=" + piece_names(promoted);
 	}
 	else
 	{
@@ -92,15 +90,9 @@ bool Move::operator==(const Move &right)
 {
 	return move_id == right.move_id;
 }
-
-Move Move::clone(Move *move)
+uint64_t Move::create_id(int square_from, int square_to, int piece, int promoted, int capture_flag, int double_flag, int en_passant_flag, int castle_flag)
 {
-	return Move(move->square_from, move->square_to, move->flags, move->piece_moved, move->piece_captured, move->promotion_piece);
-}
-
-uint64_t Move::create_id(int square_from, int square_to, int flags, int piece_moved, int piece_captured, int promotion_piece)
-{
-	return (square_from | (square_to << 6) | (flags << 12) | (piece_moved << 15) | ((piece_captured + 1) << 19) | ((promotion_piece + 1) << 23));
+	return ((square_from) | (square_to << 6) | (piece << 12) | (promoted << 16) | (capture_flag << 20) | (double_flag << 21) | (en_passant_flag << 22) | (castle_flag << 23));
 }
 
 // Independent of color (no need to add 6 for black)
@@ -121,10 +113,6 @@ std::string piece_names(int piece_num)
 	else if (piece_num % 6 == 4)
 	{
 		return "Q";
-	}
-	else if (piece_num % 6 == 5)
-	{
-		return "K";
 	}
 	else
 		return " ";

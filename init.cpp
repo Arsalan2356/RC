@@ -9,6 +9,7 @@ Board::Board(std::string &fen)
 	srand(time(0));
 
 	std::vector<std::string> v = split(fen);
+	std::cout << v[0] << std::endl;
 	int pos = 0;
 
 	for (char &c : v[0])
@@ -21,61 +22,61 @@ Board::Board(std::string &fen)
 			case 'p':
 				if (std::tolower(c, std::locale()) == c)
 				{
-					black_pieces[0] |= (1ULL << pos);
+					bitboards[6] |= (1ULL << pos);
 				}
 				else
 				{
-					white_pieces[0] |= (1ULL << pos);
+					bitboards[0] |= (1ULL << pos);
 				}
 				break;
 			case 'n':
 				if (std::tolower(c, std::locale()) == c)
 				{
-					black_pieces[1] |= (1ULL << pos);
+					bitboards[7] |= (1ULL << pos);
 				}
 				else
 				{
-					white_pieces[1] |= (1ULL << pos);
+					bitboards[1] |= (1ULL << pos);
 				}
 				break;
 			case 'b':
 				if (std::tolower(c, std::locale()) == c)
 				{
-					black_pieces[2] |= (1ULL << pos);
+					bitboards[8] |= (1ULL << pos);
 				}
 				else
 				{
-					white_pieces[2] |= (1ULL << pos);
+					bitboards[2] |= (1ULL << pos);
 				}
 				break;
 			case 'r':
 				if (std::tolower(c, std::locale()) == c)
 				{
-					black_pieces[3] |= (1ULL << pos);
+					bitboards[9] |= (1ULL << pos);
 				}
 				else
 				{
-					white_pieces[3] |= (1ULL << pos);
+					bitboards[3] |= (1ULL << pos);
 				}
 				break;
 			case 'q':
 				if (std::tolower(c, std::locale()) == c)
 				{
-					black_pieces[4] |= (1ULL << pos);
+					bitboards[10] |= (1ULL << pos);
 				}
 				else
 				{
-					white_pieces[4] |= (1ULL << pos);
+					bitboards[4] |= (1ULL << pos);
 				}
 				break;
 			case 'k':
 				if (std::tolower(c, std::locale()) == c)
 				{
-					black_pieces[5] |= (1ULL << pos);
+					bitboards[11] |= (1ULL << pos);
 				}
 				else
 				{
-					white_pieces[5] |= (1ULL << pos);
+					bitboards[5] |= (1ULL << pos);
 				}
 				break;
 			default:
@@ -92,26 +93,31 @@ Board::Board(std::string &fen)
 		}
 	}
 
-	all_white_pieces = 0;
+	occupancies[white] = 0ULL;
 	for (int i = 0; i < 6; i++)
 	{
-		all_white_pieces |= white_pieces[i];
+		occupancies[white] |= bitboards[i];
 	}
 
-	all_black_pieces = 0;
+	occupancies[black] = 0ULL;
 	for (int i = 0; i < 6; i++)
 	{
-		all_black_pieces |= black_pieces[i];
+		occupancies[black] |= bitboards[i + 6];
 	}
 
-	all_pieces = all_white_pieces | all_black_pieces;
+	occupancies[both] |= occupancies[white];
+	occupancies[both] |= occupancies[black];
 
-	white_to_move = (strcmp(v[1].c_str(), "w") == 0);
+	side = (strcmp(v[1].c_str(), "w") == 0 ? 0 : 1);
 
-	castle_rights.set(0, ((v[2].find("K") != std::string::npos)));
-	castle_rights.set(1, ((v[2].find("Q") != std::string::npos)));
-	castle_rights.set(2, ((v[2].find("k") != std::string::npos)));
-	castle_rights.set(3, ((v[2].find("q") != std::string::npos)));
+	if ((v[2].find("K") != std::string::npos))
+		castle_rights |= wk;
+	if ((v[2].find("Q") != std::string::npos))
+		castle_rights |= wq;
+	if ((v[2].find("k") != std::string::npos))
+		castle_rights |= bk;
+	if ((v[2].find("q") != std::string::npos))
+		castle_rights |= bq;
 
 	if (v[3] != "-")
 	{
@@ -122,15 +128,6 @@ Board::Board(std::string &fen)
 
 	move_index = std::stoi(v[5]) - 1;
 
-	for (int i = 0; i < 6; i++)
-	{
-		board_states[move_index][i] = white_pieces[i];
-		board_states[move_index][i + 6] = black_pieces[i];
-	}
-	board_states[move_index][12] = (white_to_move ? 1 : 0);
-	board_states[move_index][13] = castle_rights.to_ulong();
-	board_states[move_index][14] = en_passant_sq;
-
 	std::cout << "Computing attack tables for non-sliding pieces"
 			  << "\n";
 	compute_attack_tables();
@@ -138,7 +135,7 @@ Board::Board(std::string &fen)
 			  << "\n";
 	std::cout << "Initializing Magic Numbers"
 			  << "\n";
-	init_magic_numbers();
+	// init_magic_numbers();
 	std::cout << "Done"
 			  << "\n";
 	std::cout << "Computing attack tables for sliding pieces"
@@ -146,8 +143,6 @@ Board::Board(std::string &fen)
 	compute_sliding_tables();
 	std::cout << "Done"
 			  << "\n";
-
-	generate_legal_moves();
 };
 
 int fen_to_sq(std::string fen)
@@ -162,7 +157,7 @@ int Board::get_piece(int square)
 {
 	for (int i = 0; i < 12; i++)
 	{
-		uint64_t piece = (i < 6 ? white_pieces[i] : black_pieces[i - 6]);
+		uint64_t piece = bitboards[i];
 		if (piece && (1ULL << square))
 		{
 			return i;
@@ -181,4 +176,37 @@ std::vector<std::string> split(std::string &fen)
 		v.push_back(buf);
 	}
 	return v;
+}
+
+int Board::get_ls1b_index(uint64_t board)
+{
+	if (board)
+	{
+		// count trailing bits before LS1B
+		return count_bits((board & -board) - 1);
+	}
+
+	// otherwise
+	else
+		// return illegal index
+		return -1;
+}
+
+int Board::count_bits(uint64_t board)
+{
+	// bit counter
+	int count = 0;
+
+	// consecutively reset least significant 1st bit
+	while (board)
+	{
+		// increment count
+		count++;
+
+		// reset least significant 1st bit
+		board &= board - 1;
+	}
+
+	// return bit count
+	return count;
 }

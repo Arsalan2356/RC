@@ -4,9 +4,343 @@
 #include "Move.h"
 #include <vector>
 
+#define set_bit(bitboard, square) ((bitboard) |= (1ULL << (square)))
+#define get_bit(bitboard, square) ((bitboard) & (1ULL << (square)))
+#define pop_bit(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
+
+#define copy_board()                                  \
+	uint64_t bitboards_copy[12], occupancies_copy[3]; \
+	int side_copy, en_passant_copy, castle_copy;      \
+	memcpy(bitboards_copy, bitboards, 96);            \
+	memcpy(occupancies_copy, occupancies, 24);        \
+	side_copy = side, en_passant_copy = en_passant_sq, castle_copy = castle_rights;
+
+// restore board state
+#define take_back()                            \
+	memcpy(bitboards, bitboards_copy, 96);     \
+	memcpy(occupancies, occupancies_copy, 24); \
+	side = side_copy, en_passant_sq = en_passant_copy, castle_rights = castle_copy;
+
+#define encode_move(source, target, piece, promoted, capture, double, enpassant, castling) \
+	(source) |                                                                             \
+		(target << 6) |                                                                    \
+		(piece << 12) |                                                                    \
+		(promoted << 16) |                                                                 \
+		(capture << 20) |                                                                  \
+		(double << 21) |                                                                   \
+		(enpassant << 22) |                                                                \
+		(castling << 23)
+
+// extract source square
+#define get_move_source(move) (move & 0x3f)
+
+// extract target square
+#define get_move_target(move) ((move & 0xfc0) >> 6)
+
+// extract piece
+#define get_move_piece(move) ((move & 0xf000) >> 12)
+
+// extract promoted piece
+#define get_move_promoted(move) ((move & 0xf0000) >> 16)
+
+// extract capture flag
+#define get_move_capture(move) (move & 0x100000)
+
+// extract double pawn push flag
+#define get_move_double(move) (move & 0x200000)
+
+// extract enpassant flag
+#define get_move_enpassant(move) (move & 0x400000)
+
+// extract castling flag
+#define get_move_castling(move) (move & 0x800000)
+
 class Board
 {
 private:
+public:
+	typedef struct
+	{
+		// moves
+		int moves[256];
+
+		// move count
+		int count;
+	} moves_struct;
+	Board(std::string &fen);
+	bool populate_move(Move *move);
+	int make_move(uint64_t move, int move_flag);
+	void undo_move();
+	void compute_attack_tables();
+	void compute_sliding_tables();
+	uint64_t find_magic_number(int square, int relevant_bits, int flag);
+	void init_magic_numbers();
+	uint64_t get_magic_number();
+	uint64_t random_uint64();
+	uint64_t bishop_attacks_on_the_fly(int square, uint64_t block);
+	uint64_t rook_attacks_on_the_fly(int square, uint64_t block);
+	uint64_t (Board::*attack_function)(int square, uint64_t block);
+	uint64_t set_occupancy(int index, int bits, uint64_t attack_mask);
+	uint64_t get_bishop_attacks(int square, uint64_t occupancy);
+	uint64_t get_rook_attacks(int square, uint64_t occupancy);
+	uint64_t get_queen_attacks(int square, uint64_t occupancy);
+	int is_square_attacked(int square, int side);
+	void generate_moves(moves_struct *move_list);
+	void add_move(moves_struct *move_list, int move);
+	int get_piece(int square);
+	uint64_t mask_pawn_attacks(int side, int square);
+	uint64_t mask_knight_attacks(int square);
+	uint64_t mask_bishop_attacks(int sq);
+	uint64_t mask_rook_attacks(int sq);
+	uint64_t mask_king_attacks(int square);
+	void perft(int depth);
+	void perft_depth(int depth);
+	void perft_divide(int depth);
+	uint64_t nodes = 0;
+
+	uint64_t bishop_magic_numbers[64] = {0x40040844404084ULL,
+										 0x2004208a004208ULL,
+										 0x10190041080202ULL,
+										 0x108060845042010ULL,
+										 0x581104180800210ULL,
+										 0x2112080446200010ULL,
+										 0x1080820820060210ULL,
+										 0x3c0808410220200ULL,
+										 0x4050404440404ULL,
+										 0x21001420088ULL,
+										 0x24d0080801082102ULL,
+										 0x1020a0a020400ULL,
+										 0x40308200402ULL,
+										 0x4011002100800ULL,
+										 0x401484104104005ULL,
+										 0x801010402020200ULL,
+										 0x400210c3880100ULL,
+										 0x404022024108200ULL,
+										 0x810018200204102ULL,
+										 0x4002801a02003ULL,
+										 0x85040820080400ULL,
+										 0x810102c808880400ULL,
+										 0xe900410884800ULL,
+										 0x8002020480840102ULL,
+										 0x220200865090201ULL,
+										 0x2010100a02021202ULL,
+										 0x152048408022401ULL,
+										 0x20080002081110ULL,
+										 0x4001001021004000ULL,
+										 0x800040400a011002ULL,
+										 0xe4004081011002ULL,
+										 0x1c004001012080ULL,
+										 0x8004200962a00220ULL,
+										 0x8422100208500202ULL,
+										 0x2000402200300c08ULL,
+										 0x8646020080080080ULL,
+										 0x80020a0200100808ULL,
+										 0x2010004880111000ULL,
+										 0x623000a080011400ULL,
+										 0x42008c0340209202ULL,
+										 0x209188240001000ULL,
+										 0x400408a884001800ULL,
+										 0x110400a6080400ULL,
+										 0x1840060a44020800ULL,
+										 0x90080104000041ULL,
+										 0x201011000808101ULL,
+										 0x1a2208080504f080ULL,
+										 0x8012020600211212ULL,
+										 0x500861011240000ULL,
+										 0x180806108200800ULL,
+										 0x4000020e01040044ULL,
+										 0x300000261044000aULL,
+										 0x802241102020002ULL,
+										 0x20906061210001ULL,
+										 0x5a84841004010310ULL,
+										 0x4010801011c04ULL,
+										 0xa010109502200ULL,
+										 0x4a02012000ULL,
+										 0x500201010098b028ULL,
+										 0x8040002811040900ULL,
+										 0x28000010020204ULL,
+										 0x6000020202d0240ULL,
+										 0x8918844842082200ULL,
+										 0x4010011029020020ULL};
+	uint64_t rook_magic_numbers[64] = {0x8a80104000800020ULL,
+									   0x140002000100040ULL,
+									   0x2801880a0017001ULL,
+									   0x100081001000420ULL,
+									   0x200020010080420ULL,
+									   0x3001c0002010008ULL,
+									   0x8480008002000100ULL,
+									   0x2080088004402900ULL,
+									   0x800098204000ULL,
+									   0x2024401000200040ULL,
+									   0x100802000801000ULL,
+									   0x120800800801000ULL,
+									   0x208808088000400ULL,
+									   0x2802200800400ULL,
+									   0x2200800100020080ULL,
+									   0x801000060821100ULL,
+									   0x80044006422000ULL,
+									   0x100808020004000ULL,
+									   0x12108a0010204200ULL,
+									   0x140848010000802ULL,
+									   0x481828014002800ULL,
+									   0x8094004002004100ULL,
+									   0x4010040010010802ULL,
+									   0x20008806104ULL,
+									   0x100400080208000ULL,
+									   0x2040002120081000ULL,
+									   0x21200680100081ULL,
+									   0x20100080080080ULL,
+									   0x2000a00200410ULL,
+									   0x20080800400ULL,
+									   0x80088400100102ULL,
+									   0x80004600042881ULL,
+									   0x4040008040800020ULL,
+									   0x440003000200801ULL,
+									   0x4200011004500ULL,
+									   0x188020010100100ULL,
+									   0x14800401802800ULL,
+									   0x2080040080800200ULL,
+									   0x124080204001001ULL,
+									   0x200046502000484ULL,
+									   0x480400080088020ULL,
+									   0x1000422010034000ULL,
+									   0x30200100110040ULL,
+									   0x100021010009ULL,
+									   0x2002080100110004ULL,
+									   0x202008004008002ULL,
+									   0x20020004010100ULL,
+									   0x2048440040820001ULL,
+									   0x101002200408200ULL,
+									   0x40802000401080ULL,
+									   0x4008142004410100ULL,
+									   0x2060820c0120200ULL,
+									   0x1001004080100ULL,
+									   0x20c020080040080ULL,
+									   0x2935610830022400ULL,
+									   0x44440041009200ULL,
+									   0x280001040802101ULL,
+									   0x2100190040002085ULL,
+									   0x80c0084100102001ULL,
+									   0x4024081001000421ULL,
+									   0x20030a0244872ULL,
+									   0x12001008414402ULL,
+									   0x2006104900a0804ULL,
+									   0x1004081002402ULL};
+	int side;
+	static int get_ls1b_index(uint64_t board);
+	static int count_bits(uint64_t board);
+
+	enum
+	{
+		a8,
+		b8,
+		c8,
+		d8,
+		e8,
+		f8,
+		g8,
+		h8,
+		a7,
+		b7,
+		c7,
+		d7,
+		e7,
+		f7,
+		g7,
+		h7,
+		a6,
+		b6,
+		c6,
+		d6,
+		e6,
+		f6,
+		g6,
+		h6,
+		a5,
+		b5,
+		c5,
+		d5,
+		e5,
+		f5,
+		g5,
+		h5,
+		a4,
+		b4,
+		c4,
+		d4,
+		e4,
+		f4,
+		g4,
+		h4,
+		a3,
+		b3,
+		c3,
+		d3,
+		e3,
+		f3,
+		g3,
+		h3,
+		a2,
+		b2,
+		c2,
+		d2,
+		e2,
+		f2,
+		g2,
+		h2,
+		a1,
+		b1,
+		c1,
+		d1,
+		e1,
+		f1,
+		g1,
+		h1,
+		no_sq
+	};
+
+	const int castling_rights[64] = {
+		7, 15, 15, 15, 3, 15, 15, 11,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		13, 15, 15, 15, 12, 15, 15, 14};
+	enum
+	{
+		P,
+		N,
+		B,
+		R,
+		Q,
+		K,
+		p,
+		n,
+		b,
+		r,
+		q,
+		k
+	};
+	enum
+	{
+		white,
+		black,
+		both
+	};
+	enum
+	{
+		rook,
+		bishop
+	};
+	enum
+	{
+		all_moves,
+		only_captures
+	};
+	uint64_t bitboards[12];
+	uint64_t occupancies[3];
 	// Bitset stores positions of each piece of both colors in an array
 	// The bits are stored in a way that the left black rook ends up on the first bit
 	// So, in terms of squares, that would be A8
@@ -19,7 +353,7 @@ private:
 
 	// Stores the bitset that shows all occupied squares
 	// This is used as an occupancy for the bishops
-	// and rooks
+	// and rooks and for pawn pushes and piece movement
 	uint64_t all_pieces;
 
 	// Checks whose turn it is to move.
@@ -27,11 +361,18 @@ private:
 	// black's turn
 
 	// Castle rights are stored in the order they are produced in the FEN
-	// 0 - White King Side
-	// 1 - White Queen Side
-	// 2 - Black King Side
-	// 3 - Black Queen Side
-	std::bitset<4> castle_rights = {0};
+	// 1 - White King Side
+	// 2 - White Queen Side
+	// 4 - Black King Side
+	// 8 - Black Queen Side
+	int castle_rights = 0;
+	enum
+	{
+		wk = 1,
+		wq = 2,
+		bk = 4,
+		bq = 8
+	};
 
 	// Number of half moves since the last pawn advance
 	// or piece capture
@@ -39,29 +380,27 @@ private:
 
 	// Move index
 	int move_index = 0;
+	uint64_t pawn_attacks[2][64];
 
-	// Attack tables for all pieces
-	// 0 for white pieces and 1 for black pieces
-	// The to table tells you which positions a piece can attack
-	// The from table tells you where a position can be attacked from
-	// Each piece has their own to and from table and so does each color
-	// To move along a bitboard
-	// (-)1 moves you along the board horizontally (left and right) (file +- 1)
-	//   -8 moves you one square up (rank - 1)
-	//    8 moves you one square down (rank + 1)
-	//   -9 moves you one square up and left (rank - 1, file - 1), diagonal
-	//    9 moves you one square down and right (rank + 1, file + 1), diagonal
-	//   -7 moves you one square up and right (rank - 1, file + 1), diagonal
-	//    7 moves you one square down and left (rank + 1, file - 1), diagonal
+	// knight attacks table [square]
+	uint64_t knight_attacks[64];
 
-	// 0 - White Pawn attacks
-	// 1 - Knight attacks
-	// 2 - King attacks
-	// 3 - Black Pawn attacks
-	// Other pieces are implemented in their own specific tables
-	uint64_t attack_tables_from[4][64] = {0};
+	// king attacks table [square]
+	uint64_t king_attacks[64];
 
-	const int bishop_bit_counts[64] = {
+	// bishop attack masks
+	uint64_t bishop_masks[64];
+
+	// rook attack masks
+	uint64_t rook_masks[64];
+
+	// bishop attacks table [square][occupancies]
+	uint64_t bishop_attacks[64][512];
+
+	// rook attacks rable [square][occupancies]
+	uint64_t rook_attacks[64][4096];
+
+	const int bishop_relevant_bits[64] = {
 		6, 5, 5, 5, 5, 5, 5, 6,
 		5, 5, 5, 5, 5, 5, 5, 5,
 		5, 5, 7, 7, 7, 7, 5, 5,
@@ -71,7 +410,7 @@ private:
 		5, 5, 5, 5, 5, 5, 5, 5,
 		6, 5, 5, 5, 5, 5, 5, 6};
 
-	const int rook_bit_counts[64] = {
+	const int rook_relevant_bits[64] = {
 		12, 11, 11, 11, 11, 11, 11, 12,
 		11, 10, 10, 10, 10, 10, 10, 11,
 		11, 10, 10, 10, 10, 10, 10, 11,
@@ -81,7 +420,7 @@ private:
 		11, 10, 10, 10, 10, 10, 10, 11,
 		12, 11, 11, 11, 11, 11, 11, 12};
 
-	int en_passant_sq = -1;
+	int en_passant_sq = no_sq;
 
 	std::vector<uint64_t> moves = {};
 	// 0 - 5 are white pieces
@@ -90,58 +429,18 @@ private:
 	// 13 is castle rights as an integer (see castle rights for more info) (4 bit int)
 	// 14 is for en_passant index
 
-	uint64_t last_board_state[15];
-	uint64_t board_states[256][15];
 	uint64_t move_log[256];
 	std::string move_log_fen[256];
 
-public:
-	Board(std::string &fen);
-	bool invalid_move(uint64_t move_id);
-	bool check_validity(uint64_t move_id);
-	bool populate_move(Move *move);
-	void make_move(uint64_t move_id);
-	void undo_move();
-	void compute_attack_tables();
-	void compute_sliding_tables();
-	uint64_t find_magic_number(int square, int relevant_bits, int flag);
-	void init_magic_numbers();
-	uint64_t get_magic_number();
-	uint64_t random_uint64();
-	uint64_t bishop_attacks(int square, uint64_t block);
-	uint64_t rook_attacks(int square, uint64_t block);
-	uint64_t (Board::*attack_function)(int square, uint64_t block);
-	uint64_t set_occupancy(int index, int bits, uint64_t attack_mask);
-	uint64_t get_bishop_attacks(int square, uint64_t occupancy);
-	uint64_t get_rook_attacks(int square, uint64_t occupancy);
-	uint64_t get_queen_attacks(int square, uint64_t occupancy);
-	bool square_under_attack(int square, bool white);
-	uint64_t side_attack_squares(bool white);
-	void generate_all_moves();
-	int generate_legal_moves();
-	void generate_pawn_moves(bool white);
-	void generate_knight_moves(bool white);
-	void generate_bishop_moves(bool white, bool is_queen);
-	void generate_queen_moves(bool white);
-	void generate_rook_moves(bool white, bool is_queen);
-	void generate_king_moves(bool white);
-	bool in_check();
-	int get_piece(int square);
-	uint64_t bishop_mask(int sq);
-	uint64_t rook_mask(int sq);
-	std::vector<uint64_t> possible_moves_log[1024];
+	// not A file constant
+	static const uint64_t not_a_file = 18374403900871474942ULL;
 
-	uint64_t bishop_attacks_table[64][512] = {0};
-	uint64_t rook_attacks_table[64][4096] = {0};
-	uint64_t bishop_magic_numbers[64] = {0};
-	uint64_t rook_magic_numbers[64] = {0};
-	bool white_to_move;
+	// not H file constant
+	static const uint64_t not_h_file = 9187201950435737471ULL;
 
-	// Stores the bitsets of all white pieces
-	// The order they are stored in is PNBRQK (0 - 5)
-	uint64_t white_pieces[6];
+	// not HG file constant
+	static const uint64_t not_hg_file = 4557430888798830399ULL;
 
-	// Stores the bitsets of all black pieces
-	// The order they are stored in is PNBRQK (0 - 5)
-	uint64_t black_pieces[6];
+	// not AB file constant
+	static const uint64_t not_ab_file = 18229723555195321596ULL;
 };

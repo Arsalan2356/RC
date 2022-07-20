@@ -7,7 +7,7 @@
 
 void draw_board(SDL_Renderer &renderer, int square_size);
 void init_pieces(SDL_Renderer &renderer);
-void draw_pieces(SDL_Renderer &renderer, int square_size, uint64_t white_pieces[6], uint64_t black_pieces[6]);
+void draw_pieces(SDL_Renderer &renderer, int square_size, uint64_t bitboards[12]);
 
 const int WIDTH = 512,
 		  HEIGHT = 512;
@@ -68,7 +68,6 @@ int main(int argc, char *argv[])
 	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << ms_double.count() << "\n";
 	init_pieces(*renderer);
-
 	while (running)
 	{
 		if (SDL_PollEvent(&event))
@@ -102,11 +101,7 @@ int main(int argc, char *argv[])
 
 							if (board->populate_move(&move))
 							{
-								if (board->check_validity(move.move_id))
-								{
-									board->make_move(move.move_id);
-									board->generate_legal_moves();
-								}
+								board->make_move(move.move_id, 0);
 							}
 						}
 						square_selected[0] = -1;
@@ -145,7 +140,7 @@ int main(int argc, char *argv[])
 
 		// Place the chess board along with pieces into the buffer
 		draw_board(*renderer, SQUARE_SIZE);
-		draw_pieces(*renderer, SQUARE_SIZE, board->white_pieces, board->black_pieces);
+		draw_pieces(*renderer, SQUARE_SIZE, board->bitboards);
 
 		// Update the window with everything stored in the buffer
 
@@ -177,36 +172,17 @@ void draw_board(SDL_Renderer &renderer, int square_size)
 	}
 };
 
-void draw_pieces(SDL_Renderer &renderer, int square_size, uint64_t white_pieces[], uint64_t black_pieces[])
+void draw_pieces(SDL_Renderer &renderer, int square_size, uint64_t bitboards[12])
 {
 	uint64_t temp_val;
 	int pos = -1;
-	for (int i = 0; i < 6; i++)
+	for (int i = 0; i < 12; i++)
 	{
-		temp_val = white_pieces[i];
+		temp_val = bitboards[i];
 		pos = -1;
 		while (temp_val != 0)
 		{
-			int offset = __builtin_ffsll(temp_val);
-			// int offset = temp_bitset._Find_first();
-			pos += offset;
-			int x, y;
-			x = pos % 8;
-			y = pos / 8;
-
-			SDL_Rect rect = {x * square_size, y * square_size, square_size, square_size};
-			SDL_RenderCopy(&renderer, piece_textures[i], NULL, &rect);
-			temp_val >>= offset;
-		}
-	}
-
-	for (int i = 0; i < 6; i++)
-	{
-		temp_val = black_pieces[i];
-		pos = -1;
-		while (temp_val != 0)
-		{
-			int piece_pos = i + 6;
+			int piece_pos = i;
 			int offset = __builtin_ffsll(temp_val);
 			// int offset = temp_bitset._Find_first();
 			pos += offset;
