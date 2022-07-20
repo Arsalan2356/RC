@@ -2,16 +2,15 @@
 
 bool Board::populate_move(Move *move)
 {
-	uint64_t *pieces = (white_to_move ? &white_pieces[0] : &black_pieces[0]);
-	uint64_t *opp_pieces = (white_to_move ? &black_pieces[0] : &white_pieces[0]);
+	uint64_t *pieces = ((side == white) ? &bitboards[0] : &bitboards[6]);
+	uint64_t *opp_pieces = ((side == white) ? &bitboards[6] : &bitboards[0]);
 	bool found = false;
-	move->piece_moved = -1;
-	move->piece_captured = -1;
-	move->flags = 0;
+	move->piece = -1;
 	move->move_id = 0;
+	move->capture_flag = 0;
 	for (int i = 0; i < 6; i++)
 	{
-		if (move->piece_moved == -1 || move->piece_captured == -1)
+		if (move->piece == -1 || move->capture_flag == 0)
 		{
 			if ((*(pieces + i) & (1ULL << move->square_from)) && move->piece == -1)
 			{
