@@ -1,9 +1,9 @@
-#include <iostream>
-#include <SDL2/SDL.h>
 #include "Board.h"
 #include "Move.h"
-#include <chrono>
+#include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <chrono>
+#include <iostream>
 
 void draw_board(SDL_Renderer &renderer, int square_size);
 void init_pieces(SDL_Renderer &renderer);
@@ -120,9 +120,6 @@ int main(int argc, char *argv[])
 			case SDL_KEYDOWN:
 				switch (event.key.keysym.sym)
 				{
-				case SDLK_z:
-					board->undo_move();
-					break;
 
 				default:
 					break;
