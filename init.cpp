@@ -1,16 +1,40 @@
 #include "Board.h"
 #include <sstream>
+#include <string.h>
+#include <vector>
 
 std::vector<std::string> split(std::string &fen);
 int fen_to_sq(std::string fen);
 
 Board::Board(std::string &fen)
 {
+	init(fen);
+};
+
+void Board::init(std::string &fen)
+{
 	srand(time(0));
 
+	castle_rights = 0;
+
 	std::vector<std::string> v = split(fen);
-	std::cout << v[0] << std::endl;
 	int pos = 0;
+
+	for (int i = 0; i < 12; i++)
+	{
+		bitboards[i] = 0ULL;
+	}
+
+	for (int i = 0; i < 3; i++)
+	{
+		occupancies[i] = 0ULL;
+	}
+
+	half_moves = 0;
+	move_index = 0;
+
+	ply = 0;
+	best_move = 0;
 
 	for (char &c : v[0])
 	{
@@ -94,21 +118,16 @@ Board::Board(std::string &fen)
 	}
 
 	occupancies[white] = 0ULL;
-	for (int i = 0; i < 6; i++)
-	{
-		occupancies[white] |= bitboards[i];
-	}
-
 	occupancies[black] = 0ULL;
 	for (int i = 0; i < 6; i++)
 	{
+		occupancies[white] |= bitboards[i];
 		occupancies[black] |= bitboards[i + 6];
 	}
 
-	occupancies[both] |= occupancies[white];
-	occupancies[both] |= occupancies[black];
+	occupancies[both] = occupancies[white] | occupancies[black];
 
-	side = (strcmp(v[1].c_str(), "w") == 0 ? 0 : 1);
+	side = (v[1] == "w" ? 0 : 1);
 
 	if ((v[2].find("K") != std::string::npos))
 		castle_rights |= wk;
@@ -130,6 +149,7 @@ Board::Board(std::string &fen)
 
 	std::cout << "Computing attack tables for non-sliding pieces"
 			  << "\n";
+
 	compute_attack_tables();
 	std::cout << "Done"
 			  << "\n";
@@ -143,7 +163,7 @@ Board::Board(std::string &fen)
 	compute_sliding_tables();
 	std::cout << "Done"
 			  << "\n";
-};
+}
 
 int fen_to_sq(std::string fen)
 {
@@ -151,19 +171,6 @@ int fen_to_sq(std::string fen)
 	int file = (int)(fen[0] - 'a');
 
 	return rank * 8 + file;
-}
-
-int Board::get_piece(int square)
-{
-	for (int i = 0; i < 12; i++)
-	{
-		uint64_t piece = bitboards[i];
-		if (piece && (1ULL << square))
-		{
-			return i;
-		}
-	}
-	return -1;
 }
 
 std::vector<std::string> split(std::string &fen)
@@ -180,33 +187,10 @@ std::vector<std::string> split(std::string &fen)
 
 int Board::get_ls1b_index(uint64_t board)
 {
-	if (board)
-	{
-		// count trailing bits before LS1B
-		return count_bits((board & -board) - 1);
-	}
-
-	// otherwise
-	else
-		// return illegal index
-		return -1;
+	return __builtin_ffsll(board) - 1;
 }
 
 int Board::count_bits(uint64_t board)
 {
-	// bit counter
-	int count = 0;
-
-	// consecutively reset least significant 1st bit
-	while (board)
-	{
-		// increment count
-		count++;
-
-		// reset least significant 1st bit
-		board &= board - 1;
-	}
-
-	// return bit count
-	return count;
+	return __builtin_popcountll(board);
 }

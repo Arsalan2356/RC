@@ -14,7 +14,7 @@ void Board::perft(int depth)
 	}
 
 	// create move list instance
-	moves_struct move_list[1];
+	moves move_list[1];
 
 	// generate moves
 	generate_moves(move_list);
@@ -50,7 +50,7 @@ void Board::perft_depth(int depth)
 
 void Board::perft_divide(int depth)
 {
-	moves_struct curr_moves;
+	moves curr_moves;
 	generate_moves(&curr_moves);
 	unsigned long num_nodes = 0;
 	for (int count = 0; count < curr_moves.count; count++)

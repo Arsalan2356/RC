@@ -1,26 +1,32 @@
 #include "Board.h"
 
-bool Board::populate_move(Move *move)
+bool Board::populate_move(Move &move)
 {
 	uint64_t *pieces = ((side == white) ? &bitboards[0] : &bitboards[6]);
 	uint64_t *opp_pieces = ((side == white) ? &bitboards[6] : &bitboards[0]);
 	bool found = false;
-	move->piece = -1;
-	move->move_id = 0;
-	move->capture_flag = 0;
+	move.piece = -1;
+	move.promoted = 0;
+	move.capture_flag = 0;
+	move.double_flag = 0;
+	move.castle_flag = 0;
+	move.en_passant_flag = 0;
+	move.move_id = 0;
+	move.capture_piece = 12;
 	for (int i = 0; i < 6; i++)
 	{
-		if (move->piece == -1 || move->capture_flag == 0)
+		if (move.piece == -1 || move.capture_flag == 0)
 		{
-			if ((*(pieces + i) & (1ULL << move->square_from)) && move->piece == -1)
+			if ((*(pieces + i) & (1ULL << move.square_from)) && move.piece == -1)
 			{
-				move->piece = ((side == white) ? i : i + 6);
+				move.piece = ((side == white) ? i : i + 6);
 				found = true;
 			}
 
-			if ((*(opp_pieces + i) & (1ULL << move->square_to)))
+			if ((*(opp_pieces + i) & (1ULL << move.square_to)))
 			{
-				move->capture_flag = 1;
+				move.capture_flag = 1;
+				move.capture_piece = (side == white ? i + 6 : i);
 			}
 		}
 	}
@@ -30,32 +36,38 @@ bool Board::populate_move(Move *move)
 	}
 
 	int promotion_piece = -1;
-	if ((move->piece % 6 == 0) && (move->square_from / 8 == ((side == white) ? 1 : 6)))
+	if ((move.piece % 6 == 0) && (move.square_from / 8 == ((side == white) ? 1 : 6)))
 	{
 		if (promotion_piece == -1)
 		{
 			promotion_piece = ((side == white) ? 4 : 10);
 		}
-		move->promoted = promotion_piece;
+		move.promoted = promotion_piece;
 	}
 
-	if (move->piece % 6 == 5 && ((move->square_to - move->square_from == 2) || move->square_from - move->square_to == 2))
+	if (move.piece % 6 == 5 && ((move.square_to - move.square_from == 2) || (move.square_from - move.square_to == 2)))
 	{
-		move->castle_flag = 1;
+		move.castle_flag = 1;
 	}
 
-	if (move->capture_flag == 0 && move->piece % 6 == 0 && move->square_to == en_passant_sq)
+	if (move.capture_flag == 0 && move.piece % 6 == 0 && (move.square_to == en_passant_sq))
 	{
-		move->capture_flag = 1;
-		move->en_passant_flag = 1;
+		move.capture_flag = 1;
+		move.en_passant_flag = 1;
+		move.capture_piece = (side == white ? 6 : 0);
 	}
 
-	move->move_id = ((move->square_from) | (move->square_to << 6) | (move->piece << 12) | (move->promoted << 16) | (move->capture_flag << 20) | (move->double_flag << 21) | (move->en_passant_flag << 22) | (move->castle_flag << 23));
+	move.move_id = ((move.square_from) | (move.square_to << 6) | (move.piece << 12) | (move.promoted << 16) | (move.capture_flag << 20) | (move.double_flag << 21) | (move.en_passant_flag << 22) | (move.castle_flag << 23) | (move.capture_piece << 24));
 	return true;
 }
 
 int Board::is_square_attacked(int square, int side)
 {
+	if (square < 0 || square > 63)
+	{
+		return 0;
+	}
+
 	if ((side == white) && (pawn_attacks[black][square] & bitboards[P]))
 		return 1;
 
@@ -104,6 +116,7 @@ int Board::make_move(uint64_t move, int move_flag)
 		int double_push = get_move_double(move);
 		int enpass = get_move_enpassant(move);
 		int castling = get_move_castling(move);
+		int capture_piece = get_move_capture_piece(move);
 
 		// move piece
 		pop_bit(bitboards[piece], source_square);
@@ -112,34 +125,7 @@ int Board::make_move(uint64_t move, int move_flag)
 		// handling capture moves
 		if (capture)
 		{
-			// pick up bitboard piece index ranges depending on side
-			int start_piece, end_piece;
-
-			// white to move
-			if (side == white)
-			{
-				start_piece = p;
-				end_piece = k;
-			}
-
-			// black to move
-			else
-			{
-				start_piece = P;
-				end_piece = K;
-			}
-
-			// loop over bitboards opposite to the current side to move
-			for (int bb_piece = start_piece; bb_piece <= end_piece; bb_piece++)
-			{
-				// if there's a piece on the target square
-				if (get_bit(bitboards[bb_piece], target_square))
-				{
-					// remove it from corresponding bitboard
-					pop_bit(bitboards[bb_piece], target_square);
-					break;
-				}
-			}
+			pop_bit(bitboards[capture_piece], target_square);
 		}
 
 		// handle pawn promotions
@@ -214,17 +200,15 @@ int Board::make_move(uint64_t move, int move_flag)
 
 		// loop over white pieces bitboards
 		for (int bb_piece = P; bb_piece <= K; bb_piece++)
+		{
 			// update white occupancies
 			occupancies[white] |= bitboards[bb_piece];
 
-		// loop over black pieces bitboards
-		for (int bb_piece = p; bb_piece <= k; bb_piece++)
 			// update black occupancies
-			occupancies[black] |= bitboards[bb_piece];
+			occupancies[black] |= bitboards[bb_piece + 6];
+		}
 
-		// update both sides occupancies
-		occupancies[both] |= occupancies[white];
-		occupancies[both] |= occupancies[black];
+		occupancies[both] = occupancies[white] | occupancies[black];
 
 		// change side
 		side ^= 1;
@@ -248,7 +232,7 @@ int Board::make_move(uint64_t move, int move_flag)
 	// capture moves
 	else
 	{
-		// make sure move is the capture
+		// make sure move is a capture
 		if (get_move_capture(move))
 			make_move(move, all_moves);
 
@@ -258,4 +242,14 @@ int Board::make_move(uint64_t move, int move_flag)
 			return 0;
 	}
 	return 1;
+}
+
+void Board::update_log(uint64_t move)
+{
+	Move move_x = Move(move);
+	move_log[move_index] = move;
+	std::string fen = "";
+	move_x.to_fen(fen, 3);
+	move_log_fen[move_index] = fen;
+	return;
 }

@@ -8,14 +8,21 @@ std::string piece_names(int piece_num);
 
 Move::Move(uint64_t move_id)
 {
+	// 6 bits
 	this->square_from = (move_id & 0x3f);
+	// 6 bits
 	this->square_to = (move_id & 0xfc0) >> 6;
+	// 4 bits
 	this->piece = (move_id & 0xf000) >> 12;
+	// 4 bits
 	this->promoted = (move_id & 0xf0000) >> 16;
+	// 4 bits
 	this->capture_flag = (move_id & 0x100000);
 	this->double_flag = (move_id & 0x200000);
 	this->en_passant_flag = (move_id & 0x400000);
 	this->castle_flag = (move_id & 0x800000);
+	// 4 bits
+	this->capture_piece = ((move_id & 0xf000000) >> 24);
 	this->move_id = move_id;
 }
 
@@ -25,7 +32,7 @@ Move::Move(int square_from, int square_to)
 	this->square_to = square_to;
 }
 
-Move::Move(int square_from, int square_to, int piece, int promoted, int capture_flag, int double_flag, int en_passant_flag, int castle_flag)
+Move::Move(int square_from, int square_to, int piece, int promoted, int capture_flag, int double_flag, int en_passant_flag, int castle_flag, int capture_piece)
 {
 	this->square_from = square_from;
 	this->square_to = square_to;
@@ -41,9 +48,9 @@ Move::Move(int square_from, int square_to, int piece, int promoted, int capture_
 
 // diff defines whether a rank/file/position needs to specified when the move
 // is displayed in the log
-std::string Move::to_fen(int diff)
+void Move::to_fen(std::string &fen, int diff)
 {
-	std::string fen = "";
+	fen = "";
 	if (!(castle_flag))
 	{
 		if (piece % 6 != 0)
@@ -83,16 +90,16 @@ std::string Move::to_fen(int diff)
 		}
 	}
 
-	return fen;
+	return;
 }
 
 bool Move::operator==(const Move &right)
 {
 	return move_id == right.move_id;
 }
-uint64_t Move::create_id(int square_from, int square_to, int piece, int promoted, int capture_flag, int double_flag, int en_passant_flag, int castle_flag)
+uint64_t Move::create_id(int square_from, int square_to, int piece, int promoted, int capture_flag, int double_flag, int en_passant_flag, int castle_flag, int capture_piece)
 {
-	return ((square_from) | (square_to << 6) | (piece << 12) | (promoted << 16) | (capture_flag << 20) | (double_flag << 21) | (en_passant_flag << 22) | (castle_flag << 23));
+	return ((square_from) | (square_to << 6) | (piece << 12) | (promoted << 16) | (capture_flag << 20) | (double_flag << 21) | (en_passant_flag << 22) | (castle_flag << 23) | (capture_piece << 24));
 }
 
 // Independent of color (no need to add 6 for black)
