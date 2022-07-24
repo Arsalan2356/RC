@@ -65,6 +65,8 @@ int Board::evaluate()
 
 void Board::search_position(int depth)
 {
+	int score = 0;
+
 	// Clear helper data structures for search and nodes
 	memset(killer_moves, 0, sizeof(killer_moves));
 	memset(history_moves, 0, sizeof(history_moves));
@@ -72,81 +74,60 @@ void Board::search_position(int depth)
 	memset(pv_length, 0, sizeof(pv_length));
 	nodes = 0ULL;
 
-	// Search (1) = 0.0265 ms, Nodes 21
+	follow_pv = 0;
+	score_pv = 0;
+
+	// Search (1) = 1.09 ms, Nodes 21 -> 24
 	// n -> n + 1 : mx exec time, Nodes : old_nodes -> new_nodes
 	// n is the depth, m is the time ratio of exec time from the previous time,
 	// old_nodes is the number of nodes without pvs search, new_nodes is the
 	// number of nodes with pvs search
-	// 1 -> 2 : 1.4x exec time, Nodes: 185 -> 118
-	// 2 -> 3 : 4.07x exec time, Nodes : 2069 -> 695
-	// 3 -> 4 : 5.91x exec time, Nodes : 15698 -> 3385
-	// 4 -> 5 : 3.7x exec time, Nodes : 145,105 -> 17860
-	// 5 -> 6 : 8.57x exec time, Nodes : 975,967 -> 109,626
-	// 6 -> 7 : 5.2x exec time, Nodes : 8,752,070 -> 885,138
-	// 7 -> 8 : 16.25x exec time, Nodes : 52,415,362 -> 9,807,072
-	// 8 -> 9 : 23.08x exec time, Nodes : 438,805,075 -> 259,059,846
-	// 9 -> 10 : 40.62x exec time, Nodes : 10,458,246,220
-	// Depth 10, Nodes : 10,458,246,220
-	// Search (9) = 54996.4 ms
-	// Search (10) = 2,233,790 ms = 2233.8 s = 37.23 mins = 0.62 hrs
-	// Average (excluding outliers) : 7.552x exec time from n -> n + 1 search depth
-	// Node growth : ~7.5 times from n -> n + 1 search depth from (0 - 7)
-	// Node growth : ~27 times from n -> n + 1 search depth from (8 - 10)
+	// 1 -> 2 : 0.71x exec time, Nodes: 185 -> 118 -> 227
+	// 2 -> 3 : 1.38x exec time, Nodes : 2,069 -> 695 -> 1,074
+	// 3 -> 4 : 1.34x exec time, Nodes : 15,698 -> 3,385 -> 2,155
+	// 4 -> 5 : 10.2x exec time, Nodes : 145,105 -> 17,860 -> 20,323
+	// 5 -> 6 : 4.02x exec time, Nodes : 975,967 -> 109,626 -> 134,527
+	// 6 -> 7 : 6.63x exec time, Nodes : 8,752,070 -> 885,138 -> 601,644
+	// 7 -> 8 : 4.48x exec time, Nodes : 52,415,362 -> 9,807,072 -> 3,389,330
+	// 8 -> 9 : 4.45x exec time, Nodes : 438,805,075 -> 259,059,846 -> 17,674,933
+	// 9 -> 10 : 4.01x exec time, Nodes : 10,458,246,220 -> 30,307,907
+	// Depth 10, Nodes : 10,458,246,220 -> 30,307,907
+	// Search (9) = 54,996.4 ms -> 7,665.84 ms
+	// Search (10) = 2,233,790 ms = 2233.8 s = 37.23 mins = 0.62 hrs -> 31,177 ms
+	// Average (excluding outliers) : ~5x exec time from n -> n + 1 search depth
+	// Node growth : ~5 times from n -> n + 1
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	int score = negamax(-50000, 50000, depth);
-	auto t2 = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-	std::cout << ms_double.count() << "\n";
-	Move move_x = Move(pv_table[0][0]);
-	std::string fen;
-	move_x.to_fen(fen, 3);
-	std::cout << "Best Move : " << fen << " Score : " << score << " Nodes : " << nodes << " Depth : " << depth << "\n";
-}
 
-void Board::iterative_deepening(int depth)
-{
-	// Clear helper data structures for search and nodes
-	memset(killer_moves, 0, sizeof(killer_moves));
-	memset(history_moves, 0, sizeof(history_moves));
-	memset(pv_table, 0, sizeof(pv_table));
-	memset(pv_length, 0, sizeof(pv_length));
-	nodes = 0ULL;
-
-	// Search (1) = 0.0265 ms, Nodes 21
-	// n -> n + 1 : mx exec time, Nodes : old_nodes -> new_nodes
-	// n is the depth, m is the time ratio of exec time from the previous time,
-	// old_nodes is the number of nodes without pvs search, new_nodes is the
-	// number of nodes with pvs search
-	// 1 -> 2 : 1.4x exec time, Nodes: 185 -> 118
-	// 2 -> 3 : 4.07x exec time, Nodes : 2069 -> 695
-	// 3 -> 4 : 5.91x exec time, Nodes : 15698 -> 3385
-	// 4 -> 5 : 3.7x exec time, Nodes : 145,105 -> 17860
-	// 5 -> 6 : 8.57x exec time, Nodes : 975,967 -> 109,626
-	// 6 -> 7 : 5.2x exec time, Nodes : 8,752,070 -> 885,138
-	// 7 -> 8 : 16.25x exec time, Nodes : 52,415,362 -> 9,807,072
-	// 8 -> 9 : 23.08x exec time, Nodes : 438,805,075 -> 259,059,846
-	// 9 -> 10 : 40.62x exec time, Nodes : 10,458,246,220
-	// Depth 10, Nodes : 10,458,246,220
-	// Search (9) = 54996.4 ms
-	// Search (10) = 2,233,790 ms = 2233.8 s = 37.23 mins = 0.62 hrs
-	// Average (excluding outliers) : 7.552x exec time from n -> n + 1 search depth
-	// Node growth : ~7.5 times from n -> n + 1 search depth from (0 - 7)
-	// Node growth : ~27 times from n -> n + 1 search depth from (8 - 10)
+	int alpha = -50000;
+	int beta = 50000;
 
 	// iterative deepening
 	for (int current_depth = 1; current_depth <= depth; current_depth++)
 	{
-		auto t1 = std::chrono::high_resolution_clock::now();
-		int score = negamax(-50000, 50000, current_depth);
-		auto t2 = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-		std::cout << ms_double.count() << "\n";
-		Move move_x = Move(pv_table[0][0]);
-		std::string fen;
-		move_x.to_fen(fen, 3);
-		std::cout << "Best Move : " << fen << " Score : " << score << " Nodes : " << nodes << " Depth : " << depth << "\n";
+		// Enable follow_pv flag
+		follow_pv = 1;
+
+		score = negamax(alpha, beta, current_depth);
+
+		if ((score <= alpha) || (score >= beta))
+		{
+			alpha = -50000;
+			beta = 50000;
+			continue;
+		}
+
+		alpha = score - 50;
+		beta = score + 50;
 	}
+
+	Move move_x = Move(pv_table[0][0]);
+	std::string fen;
+	move_x.to_fen(fen, 3);
+	std::cout << "Best Move : " << fen << " Score : " << score << " Nodes : " << nodes << " Depth : " << depth << "\n";
+	auto t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+	std::cout << ms_double.count() << "\n";
 }
 
 int Board::negamax(int alpha, int beta, int depth)
@@ -178,6 +159,24 @@ int Board::negamax(int alpha, int beta, int depth)
 	// legal moves counter
 	int legal_moves = 0;
 
+	if (depth >= 3 && in_check == 0 && ply)
+	{
+		copy_board();
+
+		side ^= 1;
+
+		en_passant_sq = no_sq;
+
+		int score = -negamax(-beta, -beta + 1, depth - 1 - reduce);
+
+		take_back();
+
+		if (score >= beta)
+		{
+			return beta;
+		}
+	}
+
 	// create move list instance
 	moves move_list[1];
 
@@ -189,8 +188,15 @@ int Board::negamax(int alpha, int beta, int depth)
 	// 	std::cout << move_list->moves[i] << "\n";
 	// }
 
+	if (follow_pv)
+	{
+		enable_pv(move_list);
+	}
+
 	// sort moves
 	sort_moves(move_list);
+
+	int moves_searched = 0;
 
 	// loop over moves within a movelist
 	for (int count = 0; count < move_list->count; count++)
@@ -214,14 +220,42 @@ int Board::negamax(int alpha, int beta, int depth)
 		// increment legal moves
 		legal_moves++;
 
-		// score current move
-		int score = -negamax(-beta, -alpha, depth - 1);
+		// Static evaluation
+		int score;
+
+		if (moves_searched == 0)
+		{
+
+			score = -negamax(-beta, -alpha, depth - 1);
+		}
+		else
+		{
+			if (moves_searched >= full_depth_moves && ply >= reduction_limit && in_check == 0 && get_move_capture(move_list->moves[count]) == 0 && get_move_promoted(move_list->moves[count]) == 0)
+			{
+				score = -negamax(-alpha - 1, -alpha, depth - 2);
+			}
+			else
+			{
+				score = alpha + 1;
+			}
+
+			if (score > alpha)
+			{
+				score = -negamax(-alpha - 1, -alpha, depth - 1);
+				if ((score > alpha) && (score < beta))
+				{
+					score = -negamax(-beta, -alpha, depth - 1);
+				}
+			}
+		}
 
 		// decrement ply
 		ply--;
 
 		// take move back
 		take_back();
+
+		moves_searched++;
 
 		// fail-hard beta cutoff
 		if (score >= beta)
@@ -277,6 +311,15 @@ int Board::negamax(int alpha, int beta, int depth)
 
 int Board::score_move(uint64_t move)
 {
+	if (score_pv)
+	{
+		if (pv_table[0][ply] == move)
+		{
+			score_pv = 0;
+			return 900;
+		}
+	}
+
 	// score capture move
 	if (get_move_capture(move))
 	{
@@ -446,4 +489,17 @@ int Board::sort_moves(moves *move_list)
 	// }
 	// exit(0);
 	return 1;
+}
+
+void Board::enable_pv(moves *move_list)
+{
+	follow_pv = 0;
+	for (int count = 0; count < move_list->count; count++)
+	{
+		if (pv_table[0][ply] == move_list->moves[count])
+		{
+			score_pv = 1;
+			follow_pv = 1;
+		}
+	}
 }

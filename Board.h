@@ -595,7 +595,6 @@ public:
 
 	int negamax(int alpha, int beta, int depth);
 	void search_position(int depth);
-	void iterative_deepening(int depth);
 	int quiescence(int alpha, int beta);
 
 	// MVV LVA [attacker][victim]
@@ -628,4 +627,13 @@ public:
 	int pv_length[MAX_PLY];
 
 	int pv_table[MAX_PLY][MAX_PLY];
+
+	int follow_pv, score_pv;
+
+	void enable_pv(moves *move_list);
+
+	const int full_depth_moves = 4;
+	const int reduction_limit = 3;
+
+	const int reduce = 2;
 };
