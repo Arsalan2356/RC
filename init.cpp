@@ -1,19 +1,17 @@
 #include "Board.h"
 #include <sstream>
 #include <string.h>
-#include <vector>
 
-std::vector<std::string> split(std::string &fen);
 int fen_to_sq(std::string fen);
 
 Board::Board(std::string &fen)
 {
 	init(fen);
+	init_tables();
 };
 
 void Board::init(std::string &fen)
 {
-	srand(time(0));
 
 	castle_rights = 0;
 
@@ -34,7 +32,6 @@ void Board::init(std::string &fen)
 	move_index = 0;
 
 	ply = 0;
-	best_move = 0;
 
 	for (char &c : v[0])
 	{
@@ -146,6 +143,11 @@ void Board::init(std::string &fen)
 	half_moves = std::stoi(v[4]);
 
 	move_index = std::stoi(v[5]) - 1;
+}
+
+void Board::init_tables()
+{
+	srand(time(0));
 
 	std::cout << "Computing attack tables for non-sliding pieces"
 			  << "\n";

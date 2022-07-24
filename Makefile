@@ -13,5 +13,5 @@ debug: $(FILES)
 release_cmd: $(CMD_FILES)
 	g++ -std=c++20 -Ofast -fstack-usage -foptimize-sibling-calls $(CMD_FILES) -o ./bin/cmd.exe -lmingw32
 
-debug_cmd: $(CMDFILES)
+debug_cmd: $(CMD_FILES)
 	g++ -std=c++20 -fstack-usage -foptimize-sibling-calls -g -ggdb $(CMD_FILES) -o ./debug/cmd.exe -lmingw32

@@ -1,6 +1,7 @@
 #pragma once
 #include "Move.h"
 #include <cstring>
+#include <vector>
 
 #define set_bit(bitboard, square) ((bitboard) |= (1ULL << (square)))
 #define get_bit(bitboard, square) ((bitboard) & (1ULL << (square)))
@@ -47,6 +48,10 @@
 
 #define FLIP(sq) ((sq) ^ 56)
 
+#define MAX_PLY 128
+
+std::vector<std::string> split(std::string &fen);
+
 class Board
 {
 private:
@@ -61,6 +66,7 @@ public:
 	} moves;
 	Board(std::string &fen);
 	void init(std::string &fen);
+	void init_tables();
 	bool populate_move(Move &move);
 	int make_move(uint64_t move, int move_flag);
 	void update_log(uint64_t move);
@@ -587,10 +593,9 @@ public:
 
 	int ply = 0;
 
-	int best_move = 0;
-
 	int negamax(int alpha, int beta, int depth);
 	void search_position(int depth);
+	void iterative_deepening(int depth);
 	int quiescence(int alpha, int beta);
 
 	// MVV LVA [attacker][victim]
@@ -613,4 +618,14 @@ public:
 
 	int score_move(uint64_t move);
 	int sort_moves(moves *move_list);
+
+	// Stores two killer moves for 128 ply
+	int killer_moves[2][MAX_PLY];
+
+	// Stores history moves for each piece and square combination
+	int history_moves[12][64];
+
+	int pv_length[MAX_PLY];
+
+	int pv_table[MAX_PLY][MAX_PLY];
 };
