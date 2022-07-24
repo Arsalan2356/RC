@@ -7,18 +7,20 @@
 #define get_bit(bitboard, square) ((bitboard) & (1ULL << (square)))
 #define pop_bit(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
 
-#define copy_board()                                  \
-	uint64_t bitboards_copy[12], occupancies_copy[3]; \
-	int side_copy, en_passant_copy, castle_copy;      \
-	memcpy(bitboards_copy, bitboards, 96);            \
-	memcpy(occupancies_copy, occupancies, 24);        \
-	side_copy = side, en_passant_copy = en_passant_sq, castle_copy = castle_rights;
+#define copy_board()                                                                \
+	uint64_t bitboards_copy[12], occupancies_copy[3], curr_zobrist_hash_copy;       \
+	int side_copy, en_passant_copy, castle_copy;                                    \
+	memcpy(bitboards_copy, bitboards, 96);                                          \
+	memcpy(occupancies_copy, occupancies, 24);                                      \
+	side_copy = side, en_passant_copy = en_passant_sq, castle_copy = castle_rights; \
+	curr_zobrist_hash_copy = curr_zobrist_hash;
 
 // restore board state
-#define take_back()                            \
-	memcpy(bitboards, bitboards_copy, 96);     \
-	memcpy(occupancies, occupancies_copy, 24); \
-	side = side_copy, en_passant_sq = en_passant_copy, castle_rights = castle_copy;
+#define take_back()                                                                 \
+	memcpy(bitboards, bitboards_copy, 96);                                          \
+	memcpy(occupancies, occupancies_copy, 24);                                      \
+	side = side_copy, en_passant_sq = en_passant_copy, castle_rights = castle_copy; \
+	curr_zobrist_hash = curr_zobrist_hash_copy;
 
 // extract source square
 #define get_move_source(move) (move & 0x3f)
@@ -49,6 +51,16 @@
 #define FLIP(sq) ((sq) ^ 56)
 
 #define MAX_PLY 128
+
+#define hash_flag_exact 0
+
+#define hash_flag_alpha 1
+
+#define hash_flag_beta 2
+
+#define hash_size 0xa00000
+
+#define no_hash_found 100000
 
 std::vector<std::string> split(std::string &fen);
 
@@ -636,4 +648,32 @@ public:
 	const int reduction_limit = 3;
 
 	const int reduce = 2;
+
+	uint64_t curr_zobrist_hash;
+
+	uint64_t zobrist_keys[12][64];
+
+	uint64_t en_passant_zobrist[64];
+
+	uint64_t castle_zobrist[16];
+
+	uint64_t zobrist_side_key;
+
+	void init_zobrist();
+
+	typedef struct tag_hash
+	{
+		uint64_t key;
+		int depth;
+		int flags;
+		int value;
+	} hash;
+
+	hash tt_table[hash_size];
+
+	void reset_hashes();
+
+	int read_hash_entry(int alpha, int beta, int depth);
+	void set_entry(int value, int depth, int flags);
+	bool null_move_made;
 };

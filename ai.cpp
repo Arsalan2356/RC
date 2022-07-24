@@ -65,7 +65,6 @@ int Board::evaluate()
 
 void Board::search_position(int depth)
 {
-	int score = 0;
 
 	// Clear helper data structures for search and nodes
 	memset(killer_moves, 0, sizeof(killer_moves));
@@ -102,6 +101,8 @@ void Board::search_position(int depth)
 	int alpha = -50000;
 	int beta = 50000;
 
+	int score;
+
 	// iterative deepening
 	for (int current_depth = 1; current_depth <= depth; current_depth++)
 	{
@@ -121,18 +122,43 @@ void Board::search_position(int depth)
 		beta = score + 50;
 	}
 
-	Move move_x = Move(pv_table[0][0]);
-	std::string fen;
-	move_x.to_fen(fen, 3);
-	std::cout << "Best Move : " << fen << " Score : " << score << " Nodes : " << nodes << " Depth : " << depth << "\n";
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << ms_double.count() << "\n";
+
+	Move move_x = Move(pv_table[0][0]);
+	std::string fen;
+	move_x.to_fen(fen, 3);
+	if (score > -49000 && score < -48000)
+	{
+		std::cout << "Best Move : " << fen << " Eval : Mate in " << -(score + 49000) / 2 - 1 << " Nodes : " << nodes << " Depth : " << depth << "\n";
+	}
+	else if (score > 48000 && score < 49000)
+	{
+		std::cout << "Best Move : " << fen << " Eval : Mate in " << (49000 - score) / 2 + 1 << " Nodes : " << nodes << " Depth : " << depth << "\n";
+	}
+	else
+	{
+		std::cout << "Best Move : " << fen << " Eval : " << score << " Nodes : " << nodes << " Depth : " << depth << "\n";
+	}
 }
 
 int Board::negamax(int alpha, int beta, int depth)
 {
 	pv_length[ply] = ply;
+
+	// Static evaluation
+	int score = 0;
+
+	int hash_flag = hash_flag_alpha;
+
+	int pv_node = (beta - alpha > 1);
+
+	int val = read_hash_entry(alpha, beta, depth);
+	if (ply && val != no_hash_found && (!pv_node))
+	{
+		return val;
+	}
 
 	// recursion escape condition
 	if (depth == 0)
@@ -159,15 +185,28 @@ int Board::negamax(int alpha, int beta, int depth)
 	// legal moves counter
 	int legal_moves = 0;
 
-	if (depth >= 3 && in_check == 0 && ply)
+	// Null Move Pruning
+	if (depth >= 3 && in_check == 0 && ply && !null_move_made)
 	{
 		copy_board();
 
 		side ^= 1;
 
+		curr_zobrist_hash ^= zobrist_side_key;
+
+		if (en_passant_sq != no_sq)
+		{
+			curr_zobrist_hash ^= en_passant_zobrist[en_passant_sq];
+		}
+
 		en_passant_sq = no_sq;
 
+		ply++;
+
+		null_move_made = true;
 		int score = -negamax(-beta, -beta + 1, depth - 1 - reduce);
+
+		ply--;
 
 		take_back();
 
@@ -220,9 +259,6 @@ int Board::negamax(int alpha, int beta, int depth)
 		// increment legal moves
 		legal_moves++;
 
-		// Static evaluation
-		int score;
-
 		if (moves_searched == 0)
 		{
 
@@ -257,22 +293,12 @@ int Board::negamax(int alpha, int beta, int depth)
 
 		moves_searched++;
 
-		// fail-hard beta cutoff
-		if (score >= beta)
-		{
-			if (get_move_capture(move_list->moves[count]) == 0)
-			{
-				killer_moves[1][ply] = killer_moves[0][ply];
-				killer_moves[0][ply] = move_list->moves[count];
-			}
-
-			// node (move) fails high
-			return beta;
-		}
-
 		// found a better move
 		if (score > alpha)
 		{
+
+			hash_flag = hash_flag_exact;
+
 			if (get_move_capture(move_list->moves[count]) == 0)
 			{
 				history_moves[get_move_piece(move_list->moves[count])][get_move_target(move_list->moves[count])] += depth;
@@ -288,6 +314,22 @@ int Board::negamax(int alpha, int beta, int depth)
 			}
 
 			pv_length[ply] = pv_length[ply + 1];
+
+			// fail-hard beta cutoff
+			if (score >= beta)
+			{
+
+				set_entry(beta, depth, hash_flag_beta);
+
+				if (get_move_capture(move_list->moves[count]) == 0)
+				{
+					killer_moves[1][ply] = killer_moves[0][ply];
+					killer_moves[0][ply] = move_list->moves[count];
+				}
+
+				// node (move) fails high
+				return beta;
+			}
 		}
 	}
 
@@ -304,6 +346,8 @@ int Board::negamax(int alpha, int beta, int depth)
 			// return stalemate score
 			return 0;
 	}
+
+	set_entry(alpha, depth, hash_flag);
 
 	// node (move) fails low
 	return alpha;
@@ -356,6 +400,11 @@ int Board::quiescence(int alpha, int beta)
 {
 	// increment nodes count
 	nodes++;
+
+	if (ply > MAX_PLY - 1)
+	{
+		return evaluate();
+	}
 
 	// evaluate position
 	int evaluation = evaluate();
@@ -502,4 +551,77 @@ void Board::enable_pv(moves *move_list)
 			follow_pv = 1;
 		}
 	}
+}
+
+void Board::reset_hashes()
+{
+	for (int i = 0; i < hash_size; i++)
+	{
+		tt_table[i].key = 0;
+		tt_table[i].depth = 0;
+		tt_table[i].flags = 0;
+		tt_table[i].value = 0;
+	}
+}
+
+int Board::read_hash_entry(int alpha, int beta, int depth)
+{
+	hash *hash_entry = &tt_table[curr_zobrist_hash % hash_size];
+
+	if (hash_entry->key == curr_zobrist_hash)
+	{
+		if (hash_entry->depth == depth)
+		{
+			int value = hash_entry->value;
+
+			if (value < -48000)
+			{
+				value += ply;
+			}
+			else if (value > 48000)
+			{
+				value -= ply;
+			}
+
+			if (hash_entry->flags == hash_flag_exact)
+			{
+				return value;
+			}
+			else if (hash_entry->flags == hash_flag_alpha)
+			{
+				if (value <= alpha)
+				{
+					return alpha;
+				}
+			}
+			else if (hash_entry->flags == hash_flag_beta)
+			{
+				if (value >= beta)
+				{
+					return beta;
+				}
+			}
+		}
+	}
+
+	return no_hash_found;
+}
+
+void Board::set_entry(int value, int depth, int flags)
+{
+	hash *hash_entry = &tt_table[curr_zobrist_hash % hash_size];
+
+	if (value < -48000)
+	{
+		value -= ply;
+	}
+	else if (value > 48000)
+	{
+		value += ply;
+	}
+
+	hash_entry->key = curr_zobrist_hash;
+	hash_entry->depth = depth;
+	hash_entry->flags = flags;
+	hash_entry->value = value;
 }

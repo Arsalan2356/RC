@@ -1,5 +1,5 @@
-FILES = main.cpp init.cpp compute_tables.cpp magic.cpp validity.cpp generation.cpp perft.cpp ai.cpp Move.cpp
-CMD_FILES = cmd.cpp init.cpp compute_tables.cpp magic.cpp validity.cpp generation.cpp perft.cpp ai.cpp Move.cpp
+FILES = main.cpp compute_tables.cpp magic.cpp zobrist.cpp Move.cpp init.cpp validity.cpp generation.cpp perft.cpp ai.cpp
+CMD_FILES = cmd.cpp compute_tables.cpp magic.cpp zobrist.cpp Move.cpp init.cpp validity.cpp generation.cpp perft.cpp ai.cpp
 
 all: release debug release_cmd debug_cmd
 

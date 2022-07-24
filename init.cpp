@@ -6,8 +6,8 @@ int fen_to_sq(std::string fen);
 
 Board::Board(std::string &fen)
 {
-	init(fen);
 	init_tables();
+	init(fen);
 };
 
 void Board::init(std::string &fen)
@@ -30,6 +30,7 @@ void Board::init(std::string &fen)
 
 	half_moves = 0;
 	move_index = 0;
+	curr_zobrist_hash = 0ULL;
 
 	ply = 0;
 
@@ -44,60 +45,72 @@ void Board::init(std::string &fen)
 				if (std::tolower(c, std::locale()) == c)
 				{
 					bitboards[6] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[6][pos];
 				}
 				else
 				{
 					bitboards[0] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[0][pos];
 				}
 				break;
 			case 'n':
 				if (std::tolower(c, std::locale()) == c)
 				{
 					bitboards[7] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[7][pos];
 				}
 				else
 				{
 					bitboards[1] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[1][pos];
 				}
 				break;
 			case 'b':
 				if (std::tolower(c, std::locale()) == c)
 				{
 					bitboards[8] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[8][pos];
 				}
 				else
 				{
 					bitboards[2] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[2][pos];
 				}
 				break;
 			case 'r':
 				if (std::tolower(c, std::locale()) == c)
 				{
 					bitboards[9] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[9][pos];
 				}
 				else
 				{
 					bitboards[3] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[3][pos];
 				}
 				break;
 			case 'q':
 				if (std::tolower(c, std::locale()) == c)
 				{
 					bitboards[10] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[10][pos];
 				}
 				else
 				{
 					bitboards[4] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[4][pos];
 				}
 				break;
 			case 'k':
 				if (std::tolower(c, std::locale()) == c)
 				{
 					bitboards[11] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[11][pos];
 				}
 				else
 				{
 					bitboards[5] |= (1ULL << pos);
+					curr_zobrist_hash ^= zobrist_keys[5][pos];
 				}
 				break;
 			default:
@@ -139,10 +152,25 @@ void Board::init(std::string &fen)
 	{
 		en_passant_sq = fen_to_sq(v[3]);
 	}
+	else
+	{
+		en_passant_sq = no_sq;
+	}
 
-	half_moves = std::stoi(v[4]);
+	if (v.size() > 4)
+	{
+		half_moves = std::stoi(v[4]);
 
-	move_index = std::stoi(v[5]) - 1;
+		move_index = std::stoi(v[5]) - 1;
+	}
+	else
+	{
+		half_moves = 0;
+
+		move_index = 0;
+	}
+
+	reset_hashes();
 }
 
 void Board::init_tables()
@@ -163,6 +191,12 @@ void Board::init_tables()
 	std::cout << "Computing attack tables for sliding pieces"
 			  << "\n";
 	compute_sliding_tables();
+	std::cout << "Done"
+			  << "\n";
+
+	std::cout << "Generating Zobrist Keys"
+			  << "\n";
+	init_zobrist();
 	std::cout << "Done"
 			  << "\n";
 }

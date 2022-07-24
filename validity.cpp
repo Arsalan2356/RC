@@ -121,11 +121,16 @@ int Board::make_move(uint64_t move, int move_flag)
 		// move piece
 		pop_bit(bitboards[piece], source_square);
 		set_bit(bitboards[piece], target_square);
+		// Remove zobrist key from source pos
+		curr_zobrist_hash ^= zobrist_keys[piece][source_square];
+		// Remove zobrist key from target pos
+		curr_zobrist_hash ^= zobrist_keys[piece][target_square];
 
 		// handling capture moves
 		if (capture)
 		{
 			pop_bit(bitboards[capture_piece], target_square);
+			curr_zobrist_hash ^= zobrist_keys[capture_piece][target_square];
 		}
 
 		// handle pawn promotions
@@ -133,9 +138,11 @@ int Board::make_move(uint64_t move, int move_flag)
 		{
 			// erase the pawn from the target square
 			pop_bit(bitboards[(side == white) ? P : p], target_square);
+			curr_zobrist_hash ^= zobrist_keys[(side == white) ? P : p][target_square];
 
 			// set up promoted piece on chess board
 			set_bit(bitboards[promoted_piece], target_square);
+			curr_zobrist_hash ^= zobrist_keys[promoted_piece][target_square];
 		}
 
 		// handle enpassant captures
@@ -143,6 +150,7 @@ int Board::make_move(uint64_t move, int move_flag)
 		{
 			// erase the pawn depending on side to move
 			(side == white) ? pop_bit(bitboards[p], target_square + 8) : pop_bit(bitboards[P], target_square - 8);
+			curr_zobrist_hash ^= zobrist_keys[(side == white) ? p : P][(side == white) ? target_square + 8 : target_square - 8];
 		}
 
 		// reset enpassant square
@@ -153,6 +161,7 @@ int Board::make_move(uint64_t move, int move_flag)
 		{
 			// set enpassant aquare depending on side to move
 			(side == white) ? (en_passant_sq = target_square + 8) : (en_passant_sq = target_square - 8);
+			curr_zobrist_hash ^= en_passant_zobrist[en_passant_sq];
 		}
 
 		// handle castling moves
@@ -166,6 +175,8 @@ int Board::make_move(uint64_t move, int move_flag)
 				// move H rook
 				pop_bit(bitboards[R], h1);
 				set_bit(bitboards[R], f1);
+				curr_zobrist_hash ^= zobrist_keys[R][h1];
+				curr_zobrist_hash ^= zobrist_keys[R][f1];
 				break;
 
 			// white castles queen side
@@ -173,6 +184,8 @@ int Board::make_move(uint64_t move, int move_flag)
 				// move A rook
 				pop_bit(bitboards[R], a1);
 				set_bit(bitboards[R], d1);
+				curr_zobrist_hash ^= zobrist_keys[R][a1];
+				curr_zobrist_hash ^= zobrist_keys[R][d1];
 				break;
 
 			// black castles king side
@@ -180,6 +193,8 @@ int Board::make_move(uint64_t move, int move_flag)
 				// move H rook
 				pop_bit(bitboards[r], h8);
 				set_bit(bitboards[r], f8);
+				curr_zobrist_hash ^= zobrist_keys[r][h8];
+				curr_zobrist_hash ^= zobrist_keys[r][f8];
 				break;
 
 			// black castles queen side
@@ -187,13 +202,19 @@ int Board::make_move(uint64_t move, int move_flag)
 				// move A rook
 				pop_bit(bitboards[r], a8);
 				set_bit(bitboards[r], d8);
+				curr_zobrist_hash ^= zobrist_keys[r][a8];
+				curr_zobrist_hash ^= zobrist_keys[r][d8];
 				break;
 			}
 		}
 
+		curr_zobrist_hash ^= castle_zobrist[castle_rights];
+
 		// update castling rights
 		castle_rights &= castling_rights[source_square];
 		castle_rights &= castling_rights[target_square];
+
+		curr_zobrist_hash ^= castle_zobrist[castle_rights];
 
 		// reset occupancies
 		memset(occupancies, 0ULL, 24);
@@ -213,6 +234,8 @@ int Board::make_move(uint64_t move, int move_flag)
 		// change side
 		side ^= 1;
 
+		curr_zobrist_hash ^= zobrist_side_key;
+
 		// make sure that king has not been exposed into a check
 		if (is_square_attacked((side == white) ? get_ls1b_index(bitboards[k]) : get_ls1b_index(bitboards[K]), side))
 		{
@@ -225,8 +248,10 @@ int Board::make_move(uint64_t move, int move_flag)
 
 		//
 		else
+		{
 			// return legal move
 			return 1;
+		}
 	}
 
 	// capture moves

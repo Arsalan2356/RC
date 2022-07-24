@@ -121,12 +121,15 @@ int main(int argc, char *argv[])
 			case SDL_KEYDOWN:
 				switch (event.key.keysym.sym)
 				{
-				case (SDLK_z):
+				case (SDLK_s):
 					t1 = std::chrono::high_resolution_clock::now();
 					board->search_position(8);
 					t2 = std::chrono::high_resolution_clock::now();
 					ms_double = t2 - t1;
 					std::cout << ms_double.count() << "\n";
+					break;
+				case (SDLK_r):
+					board->init(fen);
 					break;
 				default:
 					break;
