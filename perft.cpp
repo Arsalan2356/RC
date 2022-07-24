@@ -6,7 +6,7 @@ std::string square_to_fen(int square);
 void Board::perft(int depth)
 {
 	// reccursion escape condition
-	if (depth == 0)
+	if (depth <= 0)
 	{
 		// increment nodes count (count reached positions)
 		nodes++;
@@ -50,12 +50,12 @@ void Board::perft_depth(int depth)
 
 void Board::perft_divide(int depth)
 {
-	moves curr_moves;
-	generate_moves(&curr_moves);
+	moves curr_moves[1];
+	generate_moves(curr_moves);
 	unsigned long num_nodes = 0;
-	for (int count = 0; count < curr_moves.count; count++)
+	for (int count = 0; count < curr_moves->count; count++)
 	{
-		Move move_in = Move(curr_moves.moves[count]);
+		Move move_in = Move(curr_moves->moves[count]);
 		std::cout << square_to_fen(move_in.square_from) << square_to_fen(move_in.square_to);
 		if (move_in.en_passant_flag)
 		{
@@ -87,8 +87,10 @@ void Board::perft_divide(int depth)
 		}
 		nodes = 0;
 		copy_board();
-		make_move(curr_moves.moves[count], 0);
-		perft(depth - 1);
+		if (make_move(curr_moves->moves[count], all_moves))
+		{
+			perft(depth - 1);
+		}
 		std::cout << ": " << nodes << "\n";
 
 		num_nodes += nodes;

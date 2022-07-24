@@ -1,4 +1,5 @@
 #include "Board.h"
+#include <chrono>
 
 int Board::evaluate()
 {
@@ -64,19 +65,44 @@ int Board::evaluate()
 
 void Board::search_position(int depth)
 {
+	nodes = 0ULL;
+	// Search (1) = 0.0265 ms, Nodes 21
+	// n -> n + 1 : mx exec time, Nodes : old_nodes -> new_nodes
+	// n is the depth, m is the time ratio of exec time from the previous time,
+	// old_nodes is the number of nodes without pvs search, new_nodes is the
+	// number of nodes with pvs search
+	// 1 -> 2 : 1.4x exec time, Nodes: 185 -> 118
+	// 2 -> 3 : 4.07x exec time, Nodes : 2069 -> 695
+	// 3 -> 4 : 5.91x exec time, Nodes : 15698 -> 3385
+	// 4 -> 5 : 3.7x exec time, Nodes : 145,105 -> 17860
+	// 5 -> 6 : 8.57x exec time, Nodes : 975,967 -> 109,626
+	// 6 -> 7 : 5.2x exec time, Nodes : 8,752,070 -> 885,138
+	// 7 -> 8 : 16.25x exec time, Nodes : 52,415,362 -> 9,807,072
+	// 8 -> 9 : 23.08x exec time, Nodes : 438,805,075 -> 259,059,846
+	// 9 -> 10 : 40.62x exec time, Nodes : 10,458,246,220
+	// Depth 10, Nodes : 10,458,246,220
+	// Search (9) = 54996.4 ms
+	// Search (10) = 2,233,790 ms = 2233.8 s = 37.23 mins = 0.62 hrs
+	// Average (excluding outliers) : 7.552x exec time from n -> n + 1 search depth
+	// Node growth : ~7.5 times from n -> n + 1 search depth from (0 - 7)
+	// Node growth : ~27 times from n -> n + 1 search depth from (8 - 10)
 	// find best move within a given position
+
+	auto t1 = std::chrono::high_resolution_clock::now();
 	int score = negamax(-50000, 50000, depth);
-	if (best_move)
-	{
-		Move move_x = Move(best_move);
-		std::string fen;
-		move_x.to_fen(fen, 3);
-		std::cout << "Best Move : " << fen << " Score : " << score << " Nodes : " << nodes << " Depth :" << depth << "\n";
-	}
+	auto t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+	std::cout << ms_double.count() << "\n";
+	Move move_x = Move(pv_table[0][0]);
+	std::string fen;
+	move_x.to_fen(fen, 3);
+	std::cout << "Best Move : " << fen << " Score : " << score << " Nodes : " << nodes << " Depth : " << depth << "\n";
 }
 
 int Board::negamax(int alpha, int beta, int depth)
 {
+	pv_length[ply] = ply;
+
 	// recursion escape condition
 	if (depth == 0)
 		// run quiescence search
@@ -96,17 +122,16 @@ int Board::negamax(int alpha, int beta, int depth)
 	// legal moves counter
 	int legal_moves = 0;
 
-	// best move so far
-	int best_sofar;
-
-	// old value of alpha
-	int old_alpha = alpha;
-
 	// create move list instance
 	moves move_list[1];
 
 	// generate moves
 	generate_moves(move_list);
+
+	// for (int i = 0; i < move_list->count; i++)
+	// {
+	// 	std::cout << move_list->moves[i] << "\n";
+	// }
 
 	// sort moves
 	sort_moves(move_list);
@@ -145,6 +170,12 @@ int Board::negamax(int alpha, int beta, int depth)
 		// fail-hard beta cutoff
 		if (score >= beta)
 		{
+			if (get_move_capture(move_list->moves[count]) == 0)
+			{
+				killer_moves[1][ply] = killer_moves[0][ply];
+				killer_moves[0][ply] = move_list->moves[count];
+			}
+
 			// node (move) fails high
 			return beta;
 		}
@@ -152,13 +183,21 @@ int Board::negamax(int alpha, int beta, int depth)
 		// found a better move
 		if (score > alpha)
 		{
+			if (get_move_capture(move_list->moves[count]) == 0)
+			{
+				history_moves[get_move_piece(move_list->moves[count])][get_move_target(move_list->moves[count])] += depth;
+			}
 			// PV node (move)
 			alpha = score;
 
-			// if root move
-			if (ply == 0)
-				// associate best move with the best score
-				best_sofar = move_list->moves[count];
+			pv_table[ply][ply] = move_list->moves[count];
+
+			for (int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++)
+			{
+				pv_table[ply][next_ply] = pv_table[ply + 1][next_ply];
+			}
+
+			pv_length[ply] = pv_length[ply + 1];
 		}
 	}
 
@@ -175,11 +214,6 @@ int Board::negamax(int alpha, int beta, int depth)
 			// return stalemate score
 			return 0;
 	}
-
-	// found better move
-	if (old_alpha != alpha)
-		// init best move
-		best_move = best_sofar;
 
 	// node (move) fails low
 	return alpha;
@@ -198,6 +232,22 @@ int Board::score_move(uint64_t move)
 	// score quiet move
 	else
 	{
+		// Score first killer move
+
+		if (killer_moves[0][ply] == move)
+		{
+			return 90;
+		}
+		// Score second killer move
+
+		else if (killer_moves[1][ply] == move)
+		{
+			return 80;
+		}
+		else
+		{
+			return history_moves[get_move_piece(move)][get_move_target(move)];
+		}
 	}
 
 	return 0;
@@ -306,10 +356,7 @@ int Board::quiescence(int alpha, int beta)
 
 int Board::sort_moves(moves *move_list)
 {
-	// TODO
-	// Change to a faster/more efficient sorting algorithm
-	// This one currently takes
-	// 500ns on a 30 move list
+	// 4550ns on a 20 move list
 	// move scores
 	int move_scores[move_list->count];
 	// score all the moves within a move list
@@ -337,5 +384,10 @@ int Board::sort_moves(moves *move_list)
 		i++;
 	}
 
+	// for (int i = 0; i < move_list->count; i++)
+	// {
+	// 	std::cout << "Move: " << move_list->moves[i] << " Score: " << move_scores[i] << "\n";
+	// }
+	// exit(0);
 	return 1;
 }
