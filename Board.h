@@ -447,8 +447,8 @@ public:
 	static const uint64_t row_1 = 65280ULL;
 
 	int evaluate();
-	int mg_value[12] = {82, 337, 365, 477, 1025, 10000, -82, -337, -365, -477, -1025, -10000};
-	int eg_value[12] = {94, 281, 297, 512, 936, 10000, -94, -281, -297, -512, -936, -10000};
+	int mg_value[12] = {82, 337, 365, 477, 1025, 0, -82, -337, -365, -477, -1025, 0};
+	int eg_value[12] = {94, 281, 297, 512, 936, 0, -94, -281, -297, -512, -936, 0};
 	int phase_inc[6] = {0, 4, 4, 8, 8, 0};
 
 	int mg_pawn_table[64] = {
@@ -606,7 +606,7 @@ public:
 	int ply = 0;
 
 	int negamax(int alpha, int beta, int depth);
-	void search_position(int depth);
+	uint64_t search_position(int depth);
 	int quiescence(int alpha, int beta);
 
 	// MVV LVA [attacker][victim]
@@ -628,7 +628,7 @@ public:
 	};
 
 	int score_move(uint64_t move);
-	int sort_moves(moves *move_list);
+	int sort_moves(moves *move_list, uint64_t best_move);
 
 	// Stores two killer moves for 128 ply
 	int killer_moves[2][MAX_PLY];
@@ -638,7 +638,7 @@ public:
 
 	int pv_length[MAX_PLY];
 
-	int pv_table[MAX_PLY][MAX_PLY];
+	uint64_t pv_table[MAX_PLY][MAX_PLY];
 
 	int follow_pv, score_pv;
 
@@ -667,13 +667,52 @@ public:
 		int depth;
 		int flags;
 		int value;
+		uint64_t best_move;
 	} hash;
 
 	hash tt_table[hash_size];
 
 	void reset_hashes();
 
-	int read_hash_entry(int alpha, int beta, int depth);
-	void set_entry(int value, int depth, int flags);
-	bool null_move_made;
+	int read_hash_entry(int alpha, int beta, int depth, uint64_t *best_move);
+	void set_entry(int value, int depth, int flags, uint64_t best_move);
+	bool null_move_made = false;
+
+	uint64_t repetition_table[300];
+
+	int repetition_index;
+
+	int is_repetition();
+
+	uint64_t file_masks[64] = {0};
+
+	uint64_t rank_masks[64] = {0};
+
+	uint64_t isolated_pawn_masks[64] = {0};
+
+	uint64_t white_passed_pawn_masks[64] = {0};
+
+	uint64_t black_passed_pawn_masks[64] = {0};
+
+	uint64_t set_file_rank_mask(int file, int rank);
+
+	int double_pawn_penalty = -10;
+
+	int isolated_pawn_penalty = -10;
+
+	void init_evaluation_masks();
+
+	// passed pawn bonus
+	const int passed_pawn_bonus[8] = {0, 5, 15, 20, 50, 70, 110, 160};
+
+	const int semi_open_file_score = 10;
+
+	const int open_file_score = 25;
+
+	bool is_checkmate;
+
+	bool is_stalemate;
+
+	int diff_calc(uint64_t move);
+	void update_game_state();
 };

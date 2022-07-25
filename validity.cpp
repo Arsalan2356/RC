@@ -273,8 +273,132 @@ void Board::update_log(uint64_t move)
 {
 	Move move_x = Move(move);
 	move_log[move_index] = move;
-	std::string fen = "";
-	move_x.to_fen(fen, 3);
-	move_log_fen[move_index] = fen;
+	std::string pgn = "";
+
+	move_x.to_pgn(pgn, diff_calc(move));
+	move_log_fen[move_index] = pgn;
+	std::cout << pgn << "\n";
+}
+
+void Board::update_game_state()
+{
+	moves move_list[1];
+	generate_moves(move_list);
+
+	int legal_moves = 0;
+
+	for (int i = 0; i < move_list->count; i++)
+	{
+
+		copy_board();
+
+		if (make_move(move_list->moves[i], 0) != 0)
+		{
+			legal_moves++;
+			take_back();
+			break;
+		}
+
+		take_back();
+	}
+
+	if (legal_moves == 0)
+	{
+		if (is_square_attacked((side == white) ? get_ls1b_index(bitboards[K]) : get_ls1b_index(bitboards[k]), side ^ 1))
+		{
+			is_checkmate = true;
+			return;
+		}
+		else
+		{
+			is_stalemate = true;
+			return;
+		}
+	}
+	else
+	{
+		is_checkmate = false;
+		is_stalemate = false;
+	}
+
+	repetition_index++;
+	repetition_table[repetition_index] = curr_zobrist_hash;
 	return;
+}
+
+int Board::diff_calc(uint64_t move)
+{
+	int diff = 0;
+	int piece_moved = get_move_piece(move);
+	uint64_t temp_val = bitboards[piece_moved];
+	int square_from = get_move_source(move);
+	int rank_diff = -1;
+	int file_diff = -1;
+	while (temp_val)
+	{
+		int pos = get_ls1b_index(temp_val);
+		uint64_t attacks = 0ULL;
+		if (pos != square_from)
+		{
+			switch (piece_moved % 6)
+			{
+			case P:
+				if (piece_moved < 6)
+				{
+					attacks = pawn_attacks[white][pos];
+				}
+				else
+				{
+					attacks = pawn_attacks[black][pos];
+				}
+				break;
+			case N:
+				attacks = knight_attacks[pos];
+				break;
+			case B:
+				attacks = get_bishop_attacks(pos, occupancies[both]);
+				break;
+			case R:
+				attacks = get_rook_attacks(pos, occupancies[both]);
+				break;
+			case Q:
+				attacks = get_queen_attacks(pos, occupancies[both]);
+				break;
+			case K:
+				attacks = king_attacks[pos];
+				break;
+			default:
+				break;
+			}
+		}
+
+		if (get_bit(attacks, get_move_target(move)))
+		{
+			if ((pos % 8 != square_from) && (pos / 8 == square_from / 8))
+			{
+				file_diff = 1;
+			}
+			else if ((pos / 8 != square_from / 8) && (pos % 8 == square_from % 8))
+			{
+				rank_diff = 1;
+			}
+		}
+
+		pop_bit(temp_val, pos);
+	}
+
+	if (rank_diff == 1 && file_diff == 1)
+	{
+		diff = 3;
+	}
+	else if (file_diff == 1)
+	{
+		diff = 1;
+	}
+	else if (rank_diff == 1)
+	{
+		diff = 2;
+	}
+
+	return diff;
 }

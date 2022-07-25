@@ -15,6 +15,14 @@ void Board::init(std::string &fen)
 
 	castle_rights = 0;
 
+	curr_zobrist_hash = 0ULL;
+
+	repetition_index = 0;
+
+	memset(repetition_table, 0, sizeof(repetition_table));
+
+	ply = 0;
+
 	std::vector<std::string> v = split(fen);
 	int pos = 0;
 
@@ -28,9 +36,19 @@ void Board::init(std::string &fen)
 		occupancies[i] = 0ULL;
 	}
 
+	for (int i = 0; i < 256; i++)
+	{
+		move_log[i] = -1;
+		move_log_fen[i] = "";
+	}
+
 	half_moves = 0;
 	move_index = 0;
 	curr_zobrist_hash = 0ULL;
+
+	is_checkmate = false;
+
+	is_stalemate = false;
 
 	ply = 0;
 
@@ -127,8 +145,6 @@ void Board::init(std::string &fen)
 		}
 	}
 
-	occupancies[white] = 0ULL;
-	occupancies[black] = 0ULL;
 	for (int i = 0; i < 6; i++)
 	{
 		occupancies[white] |= bitboards[i];
@@ -197,6 +213,12 @@ void Board::init_tables()
 	std::cout << "Generating Zobrist Keys"
 			  << "\n";
 	init_zobrist();
+	std::cout << "Done"
+			  << "\n";
+
+	std::cout << "Generating Evaluation Masks"
+			  << "\n";
+	init_evaluation_masks();
 	std::cout << "Done"
 			  << "\n";
 }

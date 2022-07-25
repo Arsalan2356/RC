@@ -8,6 +8,7 @@
 void draw_board(SDL_Renderer &renderer, int square_size);
 void init_pieces(SDL_Renderer &renderer);
 void draw_piece(SDL_Renderer &renderer, int square_size, uint64_t board, int piece_pos);
+void highlight_last_move(SDL_Renderer &renderer, uint64_t move, int square_size);
 
 const int WIDTH = 512,
 		  HEIGHT = 512;
@@ -68,8 +69,13 @@ int main(int argc, char *argv[])
 	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << ms_double.count() << "\n";
 	init_pieces(*renderer);
+	bool player_one = true;
+	bool player_two = true;
+	bool human_turn = (board->side == board->white ? player_one : player_two);
+
 	while (running)
 	{
+		human_turn = ((board->side == board->white) ? player_one : player_two);
 		if (SDL_PollEvent(&event))
 		{
 			switch (event.type)
@@ -93,7 +99,7 @@ int main(int argc, char *argv[])
 						square_selected[1] = (x + y * 8);
 					}
 
-					if (square_selected[0] != -1 && square_selected[1] != -1)
+					if (square_selected[0] != -1 && square_selected[1] != -1 && human_turn && !board->is_checkmate && !board->is_stalemate)
 					{
 						if (square_selected[0] != square_selected[1])
 						{
@@ -101,8 +107,11 @@ int main(int argc, char *argv[])
 
 							if (board->populate_move(move))
 							{
-								board->make_move(move.move_id, 0);
 								board->update_log(move.move_id);
+
+								board->make_move(move.move_id, 0);
+
+								board->update_game_state();
 							}
 						}
 						square_selected[0] = -1;
@@ -130,6 +139,7 @@ int main(int argc, char *argv[])
 					break;
 				case (SDLK_r):
 					board->init(fen);
+					human_turn = (board->side == board->white ? player_one : player_two);
 					break;
 				default:
 					break;
@@ -142,15 +152,30 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		if (!human_turn && !board->is_checkmate && !board->is_stalemate)
+		{
+			uint64_t move = board->search_position(8);
+
+			board->update_log(move);
+			board->make_move(move, 0);
+			board->update_game_state();
+		}
+
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
 		// Place the chess board along with pieces into the buffer
 		draw_board(*renderer, SQUARE_SIZE);
+		if (board->move_log[board->move_index] != -1)
+		{
+			highlight_last_move(*renderer, board->move_log[board->move_index], SQUARE_SIZE);
+		}
+
 		for (int i = 0; i < 12; i++)
 		{
 			draw_piece(*renderer, SQUARE_SIZE, board->bitboards[i], i);
 		}
+
 		// Update the window with everything stored in the buffer
 
 		SDL_RenderPresent(renderer);
@@ -171,11 +196,11 @@ void draw_board(SDL_Renderer &renderer, int square_size)
 		SDL_Rect rect = {x * square_size, y * square_size, square_size, square_size};
 		if ((x + y) % 2 == 0)
 		{
-			SDL_SetRenderDrawColor(&renderer, 255, 255, 255, 255);
+			SDL_SetRenderDrawColor(&renderer, 238, 238, 212, 255);
 		}
 		else
 		{
-			SDL_SetRenderDrawColor(&renderer, 0, 102, 0, 255);
+			SDL_SetRenderDrawColor(&renderer, 115, 150, 92, 255);
 		}
 		SDL_RenderFillRect(&renderer, &rect);
 	}
@@ -209,4 +234,26 @@ void init_pieces(SDL_Renderer &renderer)
 		std::string file_name = "./images/" + std::to_string(i) + ".png";
 		piece_textures[i] = IMG_LoadTexture(&renderer, file_name.c_str());
 	}
+}
+
+void highlight_last_move(SDL_Renderer &renderer, uint64_t move, int square_size)
+{
+	int square_from = get_move_source(move);
+	int square_to = get_move_target(move);
+
+	SDL_SetRenderDrawColor(&renderer, 182, 202, 71, 255);
+
+	int x_from = square_from % 8;
+	int y_from = square_from / 8;
+
+	int x_to = square_to % 8;
+	int y_to = square_to / 8;
+
+	SDL_Rect square_from_rect = {x_from * square_size, y_from * square_size, square_size, square_size};
+
+	SDL_Rect square_to_rect = {x_to * square_size, y_to * square_size, square_size, square_size};
+
+	SDL_RenderFillRect(&renderer, &square_from_rect);
+
+	SDL_RenderFillRect(&renderer, &square_to_rect);
 }

@@ -66,10 +66,14 @@ int main(int argc, char *argv[])
 					int depth = std::stoi(inputs[2]);
 					board->search_position(depth);
 				}
+				else if (inputs[1] == "eval")
+				{
+					std::cout << board->evaluate() << "\n";
+				}
 			}
 			else if (inputs[0] == "exit")
 			{
-				exit(0); 
+				exit(0);
 			}
 	}
 }

@@ -4,7 +4,7 @@ std::string piece_names(int piece_num);
 
 // Only constructor which takes in a square_from, a square_to, a flag variable with multiple values (see Move.h), a piece_moved
 // (need to account for white/black), a piece_captured (-1 if none and needs to account for white/black), a promotion piece
-// (-1 if none, not required to account for black (see to_fen) but it's preferred for piece conversion)
+// (-1 if none, not required to account for black (see to_pgn) but it's preferred for piece conversion)
 
 Move::Move(uint64_t move_id)
 {
@@ -48,45 +48,45 @@ Move::Move(int square_from, int square_to, int piece, int promoted, int capture_
 
 // diff defines whether a rank/file/position needs to specified when the move
 // is displayed in the log
-void Move::to_fen(std::string &fen, int diff)
+void Move::to_pgn(std::string &pgn, int diff)
 {
-	fen = "";
+	pgn = "";
 	if (!(castle_flag))
 	{
 		if (piece % 6 != 0)
 		{
-			fen += piece_names(piece);
+			pgn += piece_names(piece);
 			if (diff == 1)
-				fen += (char)(square_from % 8 + 97);
+				pgn += (char)(square_from % 8 + 97);
 			else if (diff == 2)
-				fen += ((char)((8 - (square_from / 8)) + 48));
+				pgn += ((char)((8 - (square_from / 8)) + 48));
 			else if (diff == 3)
 			{
-				fen += ((char)((square_from % 8) + 97));
-				fen += ((char)((8 - (square_from / 8)) + 48));
+				pgn += ((char)((square_from % 8) + 97));
+				pgn += ((char)((8 - (square_from / 8)) + 48));
 			}
 		}
 
 		if (capture_flag)
 		{
 			if (piece % 6 == 0)
-				fen += (char)(square_from % 8 + 97);
-			fen += "x";
+				pgn += (char)(square_from % 8 + 97);
+			pgn += "x";
 		}
-		fen += ((char)((square_to % 8) + 97));
-		fen += ((char)((8 - (square_to / 8)) + 48));
+		pgn += ((char)((square_to % 8) + 97));
+		pgn += ((char)((8 - (square_to / 8)) + 48));
 		if (piece == 0 && (promoted != 0))
-			fen += "=" + piece_names(promoted);
+			pgn += "=" + piece_names(promoted);
 	}
 	else
 	{
 		if (square_to - square_from == 2)
 		{
-			fen += "O-O";
+			pgn += "O-O";
 		}
 		else
 		{
-			fen += "O-O-O";
+			pgn += "O-O-O";
 		}
 	}
 
