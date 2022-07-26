@@ -57,6 +57,18 @@ bool Board::populate_move(Move &move)
 		move.capture_piece = (side == white ? 6 : 0);
 	}
 
+	if (move.piece % 6 == 0)
+	{
+		if (side == white && (move.square_from - move.square_to == 16))
+		{
+			move.double_flag = 1;
+		}
+		if (side == black && (move.square_to - move.square_from == 16))
+		{
+			move.double_flag = 1;
+		}
+	}
+
 	move.move_id = ((move.square_from) | (move.square_to << 6) | (move.piece << 12) | (move.promoted << 16) | (move.capture_flag << 20) | (move.double_flag << 21) | (move.en_passant_flag << 22) | (move.castle_flag << 23) | (move.capture_piece << 24));
 	return true;
 }
@@ -401,4 +413,74 @@ int Board::diff_calc(uint64_t move)
 	}
 
 	return diff;
+}
+
+int Board::check_validity(uint64_t move)
+{
+	moves move_list[1];
+	generate_moves(move_list);
+	for (int count = 0; count < move_list->count; count++)
+	{
+		if (move == move_list->moves[count])
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+uint64_t Board::get_all_squares(int piece, int pos)
+{
+	uint64_t moves = 0ULL;
+	int target_square = (side == white ? pos - 8 : pos + 8);
+	switch (piece % 6)
+	{
+	case P:
+
+		if (side == white)
+		{
+			if (!(target_square < a8) && !get_bit(occupancies[both], target_square))
+			{
+				set_bit(moves, target_square);
+			}
+			if ((pos >= a2 && pos <= h2) && !get_bit(occupancies[both], target_square - 8))
+			{
+				set_bit(moves, target_square - 8);
+			}
+			moves |= (pawn_attacks[white][pos] & occupancies[black]);
+		}
+		else
+		{
+			if (!(target_square > h1) && !get_bit(occupancies[both], target_square))
+			{
+				set_bit(moves, target_square);
+			}
+			if ((pos >= a7 && pos <= h7) && !get_bit(occupancies[both], target_square + 8))
+			{
+				set_bit(moves, target_square + 8);
+			}
+			moves |= (pawn_attacks[black][pos] & occupancies[white]);
+		}
+		break;
+	case N:
+		moves = knight_attacks[pos];
+		break;
+	case B:
+		moves = get_bishop_attacks(pos, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+		break;
+	case R:
+		moves = get_rook_attacks(pos, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+		break;
+	case Q:
+		moves = get_queen_attacks(pos, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+		break;
+	case K:
+		moves = king_attacks[pos];
+		break;
+	default:
+		break;
+	}
+
+	return moves;
 }

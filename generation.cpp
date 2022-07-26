@@ -623,7 +623,7 @@ void Board::generate_captures(moves *move_list)
 			// pick up black pawn bitboards index
 			if (piece == p)
 			{
-				// loop over white pawns within white pawn bitboard
+				// loop over black pawns within black pawn bitboard
 				while (bitboard)
 				{
 					// init source square

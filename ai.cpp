@@ -271,7 +271,7 @@ uint64_t Board::search_position(int depth)
 	move_x.to_pgn(pgn, diff_calc(pv_table[0][0]));
 	if (score > -49000 && score < -48000)
 	{
-		std::cout << "Best Move : " << pgn << " Eval : Mate in " << -(score + 49000) / 2 - 1 << " Nodes : " << nodes << " Depth : " << depth << "\n";
+		std::cout << "Best Move : " << pgn << " Eval : Mate in " << (score + 49000) / 2 - 1 << " Nodes : " << nodes << " Depth : " << depth << "\n";
 	}
 	else if (score > 48000 && score < 49000)
 	{

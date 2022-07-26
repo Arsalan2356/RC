@@ -64,22 +64,24 @@
 
 std::vector<std::string> split(std::string &fen);
 
+typedef struct
+{
+	// moves
+	int moves[256];
+
+	// move count
+	int count;
+} moves;
 class Board
 {
 private:
 public:
-	typedef struct
-	{
-		// moves
-		int moves[256];
-
-		// move count
-		int count;
-	} moves;
 	Board(std::string &fen);
 	void init(std::string &fen);
 	void init_tables();
 	bool populate_move(Move &move);
+	uint64_t get_all_squares(int piece, int pos);
+	int check_validity(uint64_t move);
 	int make_move(uint64_t move, int move_flag);
 	void update_log(uint64_t move);
 	void compute_attack_tables();
@@ -715,4 +717,6 @@ public:
 
 	int diff_calc(uint64_t move);
 	void update_game_state();
+
+	moves player_moves[1];
 };

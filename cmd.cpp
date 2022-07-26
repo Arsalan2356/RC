@@ -6,29 +6,7 @@
 
 int main(int argc, char *argv[])
 {
-	std::string fen;
-	if (argc > 1)
-	{
-		if (strcmp(argv[1], "-f") == 0)
-		{
-			if (argc > 2)
-			{
-				fen = argv[2];
-			}
-			else
-			{
-				std::cout << "-f requires a parameter."
-						  << "\n"
-						  << "Input has been ignored and fen has been initialized to: "
-						  << "\n"
-						  << "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-			}
-		}
-	}
-	if (strcmp(fen.c_str(), "") == 0)
-	{
-		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-	}
+	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 	Board *board = new Board(fen);
 	while (true)
 	{
