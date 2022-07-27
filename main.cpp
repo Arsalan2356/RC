@@ -3,17 +3,16 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <algorithm>
-#include <chrono>
 #include <iostream>
 #include <thread>
 
-void draw_board(SDL_Renderer &renderer, int square_size);
-void init_pieces(SDL_Renderer &renderer);
-void draw_piece(SDL_Renderer &renderer, int square_size, uint64_t board, int piece_pos);
-void highlight_last_move(SDL_Renderer &renderer, uint64_t move, int square_size);
-void highlight_attacked_squares(SDL_Renderer &renderer, int pos, moves *player_moves);
-void draw_circle(SDL_Renderer &renderer, int center_x, int center_y, int radius);
-void draw_half_circle(SDL_Renderer &renderer, int center_x, int center_y, int radius1, int radius2);
+void draw_board(SDL_Renderer *renderer, int square_size);
+void init_pieces(SDL_Renderer *renderer);
+void draw_piece(SDL_Renderer *renderer, int square_size, uint64_t board, int piece_pos);
+void highlight_last_move(SDL_Renderer *renderer, uint64_t move, int square_size);
+void highlight_attacked_squares(SDL_Renderer *renderer, int pos, moves *player_moves);
+void draw_circle(SDL_Renderer *renderer, int center_x, int center_y, int radius);
+void draw_half_circle(SDL_Renderer *renderer, int center_x, int center_y, int radius1, int radius2);
 const int WIDTH = 512,
 		  HEIGHT = 512;
 const int BOARD_SIZE = 8;
@@ -99,20 +98,26 @@ int main(int argc, char *argv[])
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << ms_double.count() << "\n";
-	init_pieces(*renderer);
+	init_pieces(renderer);
+	moves temp_moves[1];
 
 	bool human_turn = (board->side == board->white ? player_one : player_two);
-	if (human_turn)
+	bool moves_generated = false;
+	if (human_turn && !moves_generated)
 	{
-		board->generate_moves(board->player_moves);
+		board->generate_moves(temp_moves);
+		board->legalize_player_moves(board->player_moves, temp_moves);
+		moves_generated = true;
 	}
 
 	while (running)
 	{
 		human_turn = (board->side == board->white ? player_one : player_two);
-		if (human_turn)
+		if (human_turn && !moves_generated)
 		{
-			board->generate_moves(board->player_moves);
+			board->generate_moves(temp_moves);
+			board->legalize_player_moves(board->player_moves, temp_moves);
+			moves_generated = true;
 		}
 		if (SDL_PollEvent(&event))
 		{
@@ -152,6 +157,8 @@ int main(int argc, char *argv[])
 									board->make_move(move.move_id, 0);
 
 									board->update_game_state();
+
+									moves_generated = false;
 								}
 							}
 						}
@@ -180,7 +187,6 @@ int main(int argc, char *argv[])
 					break;
 				case (SDLK_r):
 					board->init(fen);
-					human_turn = (board->side == board->white ? player_one : player_two);
 					break;
 				case SDLK_n:
 					std::cout << board->player_moves->count << "\n";
@@ -206,16 +212,17 @@ int main(int argc, char *argv[])
 			board->update_log(move);
 			board->make_move(move, 0);
 			board->update_game_state();
+			moves_generated = false;
 		}
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
 		// Place the chess board along with pieces into the buffer
-		draw_board(*renderer, SQUARE_SIZE);
+		draw_board(renderer, SQUARE_SIZE);
 		if (board->move_log[board->move_index] != -1)
 		{
-			highlight_last_move(*renderer, board->move_log[board->move_index], SQUARE_SIZE);
+			highlight_last_move(renderer, board->move_log[board->move_index], SQUARE_SIZE);
 		}
 
 		if (square_selected[0] != -1)
@@ -232,12 +239,12 @@ int main(int argc, char *argv[])
 				}
 			}
 			if (piece != -1)
-				highlight_attacked_squares(*renderer, square_selected[0], board->player_moves);
+				highlight_attacked_squares(renderer, square_selected[0], board->player_moves);
 		}
 
 		for (int i = 0; i < 12; i++)
 		{
-			draw_piece(*renderer, SQUARE_SIZE, board->bitboards[i], i);
+			draw_piece(renderer, SQUARE_SIZE, board->bitboards[i], i);
 		}
 
 		// Update the window with everything stored in the buffer
@@ -251,7 +258,7 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
-void draw_board(SDL_Renderer &renderer, int square_size)
+void draw_board(SDL_Renderer *renderer, int square_size)
 {
 	for (int pos = 0; pos < 64; pos++)
 	{
@@ -260,52 +267,50 @@ void draw_board(SDL_Renderer &renderer, int square_size)
 		SDL_Rect rect = {x * square_size, y * square_size, square_size, square_size};
 		if ((x + y) % 2 == 0)
 		{
-			SDL_SetRenderDrawColor(&renderer, 238, 238, 212, 255);
+			SDL_SetRenderDrawColor(renderer, 238, 238, 212, 255);
 		}
 		else
 		{
-			SDL_SetRenderDrawColor(&renderer, 115, 150, 92, 255);
+			SDL_SetRenderDrawColor(renderer, 115, 150, 92, 255);
 		}
-		SDL_RenderFillRect(&renderer, &rect);
+		SDL_RenderFillRect(renderer, &rect);
 	}
 };
 
-void draw_piece(SDL_Renderer &renderer, int square_size, uint64_t board, int piece_pos)
+void draw_piece(SDL_Renderer *renderer, int square_size, uint64_t board, int piece_pos)
 {
 	uint64_t temp_val;
 	int pos = -1;
 
 	temp_val = board;
-	pos = -1;
 	while (temp_val != 0)
 	{
-		int offset = __builtin_ffsll(temp_val);
-		pos += offset;
+		int pos = __builtin_ffsll(temp_val) - 1;
 		int x, y;
 		x = pos % 8;
 		y = pos / 8;
 
 		SDL_Rect rect = {x * square_size, y * square_size, square_size, square_size};
-		SDL_RenderCopy(&renderer, piece_textures[piece_pos], NULL, &rect);
-		temp_val >>= offset;
+		SDL_RenderCopy(renderer, piece_textures[piece_pos], NULL, &rect);
+		pop_bit(temp_val, pos);
 	}
 };
 
-void init_pieces(SDL_Renderer &renderer)
+void init_pieces(SDL_Renderer *renderer)
 {
 	for (int i = 0; i < 12; i++)
 	{
 		std::string file_name = "./images/" + std::to_string(i) + ".png";
-		piece_textures[i] = IMG_LoadTexture(&renderer, file_name.c_str());
+		piece_textures[i] = IMG_LoadTexture(renderer, file_name.c_str());
 	}
 }
 
-void highlight_last_move(SDL_Renderer &renderer, uint64_t move, int square_size)
+void highlight_last_move(SDL_Renderer *renderer, uint64_t move, int square_size)
 {
 	int square_from = get_move_source(move);
 	int square_to = get_move_target(move);
 
-	SDL_SetRenderDrawColor(&renderer, 182, 202, 71, 255);
+	SDL_SetRenderDrawColor(renderer, 182, 202, 71, 255);
 
 	int x_from = square_from % 8;
 	int y_from = square_from / 8;
@@ -317,14 +322,14 @@ void highlight_last_move(SDL_Renderer &renderer, uint64_t move, int square_size)
 
 	SDL_Rect square_to_rect = {x_to * square_size, y_to * square_size, square_size, square_size};
 
-	SDL_RenderFillRect(&renderer, &square_from_rect);
+	SDL_RenderFillRect(renderer, &square_from_rect);
 
-	SDL_RenderFillRect(&renderer, &square_to_rect);
+	SDL_RenderFillRect(renderer, &square_to_rect);
 }
 
-void highlight_attacked_squares(SDL_Renderer &renderer, int pos, moves *player_moves)
+void highlight_attacked_squares(SDL_Renderer *renderer, int pos, moves *player_moves)
 {
-	SDL_SetRenderDrawColor(&renderer, 0, 0, 0, 15);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 15);
 
 	for (int count = 0; count < player_moves->count; count++)
 	{
@@ -346,9 +351,9 @@ void highlight_attacked_squares(SDL_Renderer &renderer, int pos, moves *player_m
 	}
 }
 
-void draw_circle(SDL_Renderer &renderer, int center_x, int center_y, int radius)
+void draw_circle(SDL_Renderer *renderer, int center_x, int center_y, int radius)
 {
-	SDL_SetRenderDrawBlendMode(&renderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 	for (int w = 0; w < radius * 2; w++)
 	{
 		for (int h = 0; h < radius * 2; h++)
@@ -357,15 +362,15 @@ void draw_circle(SDL_Renderer &renderer, int center_x, int center_y, int radius)
 			int dy = radius - h; // vertical offset
 			if ((dx * dx + dy * dy) <= (radius * radius))
 			{
-				SDL_RenderDrawPoint(&renderer, center_x + dx, center_y + dy);
+				SDL_RenderDrawPoint(renderer, center_x + dx, center_y + dy);
 			}
 		}
 	}
 }
 
-void draw_half_circle(SDL_Renderer &renderer, int center_x, int center_y, int radius1, int radius2)
+void draw_half_circle(SDL_Renderer *renderer, int center_x, int center_y, int radius1, int radius2)
 {
-	SDL_SetRenderDrawBlendMode(&renderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 	for (int w = 0; w < radius2 * 2; w++)
 	{
 		for (int h = 0; h < radius2 * 2; h++)
@@ -374,7 +379,7 @@ void draw_half_circle(SDL_Renderer &renderer, int center_x, int center_y, int ra
 			int dy = radius2 - h; // vertical offset
 			if ((dx * dx + dy * dy) <= (radius2 * radius2) && (dx * dx + dy * dy) >= (radius1 * radius1))
 			{
-				SDL_RenderDrawPoint(&renderer, center_x + dx, center_y + dy);
+				SDL_RenderDrawPoint(renderer, center_x + dx, center_y + dy);
 			}
 		}
 	}

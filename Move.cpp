@@ -121,6 +121,10 @@ std::string piece_names(int piece_num)
 	{
 		return "Q";
 	}
+	else if (piece_num % 6 == 5)
+	{
+		return "K";
+	}
 	else
 		return " ";
 }

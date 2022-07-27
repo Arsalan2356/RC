@@ -1,5 +1,4 @@
 #include "Board.h"
-#include <chrono>
 
 int Board::evaluate()
 {
@@ -271,15 +270,24 @@ uint64_t Board::search_position(int depth)
 	move_x.to_pgn(pgn, diff_calc(pv_table[0][0]));
 	if (score > -49000 && score < -48000)
 	{
-		std::cout << "Best Move : " << pgn << " Eval : Mate in " << (score + 49000) / 2 - 1 << " Nodes : " << nodes << " Depth : " << depth << "\n";
+		std::cout << "Best Move : " << pgn << "\n"
+				  << "Eval : Mate in " << (score + 49000) / 2 - 1 << "\n"
+				  << "Nodes : " << nodes << "\n"
+				  << "Depth : " << depth << "\n";
 	}
 	else if (score > 48000 && score < 49000)
 	{
-		std::cout << "Best Move : " << pgn << " Eval : Mate in " << (49000 - score) / 2 + 1 << " Nodes : " << nodes << " Depth : " << depth << "\n";
+		std::cout << "Best Move : " << pgn << "\n"
+				  << "Eval : Mate in " << (49000 - score) / 2 + 1 << "\n"
+				  << "Nodes : " << nodes << "\n"
+				  << "Depth : " << depth << "\n";
 	}
 	else
 	{
-		std::cout << "Best Move : " << pgn << " Eval : " << score << " Nodes : " << nodes << " Depth : " << depth << "\n";
+		std::cout << "Best Move : " << pgn << "\n"
+				  << "Eval : " << score << "\n"
+				  << "Nodes : " << nodes << "\n"
+				  << "Depth : " << depth << "\n";
 	}
 
 	return pv_table[0][0];

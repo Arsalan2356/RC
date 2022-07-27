@@ -484,3 +484,18 @@ uint64_t Board::get_all_squares(int piece, int pos)
 
 	return moves;
 }
+
+void Board::legalize_player_moves(moves *player_moves, moves *pseudo_legal_moves)
+{
+	player_moves->count = 0;
+	for (int i = 0; i < pseudo_legal_moves->count; i++)
+	{
+		copy_board();
+		if (make_move(pseudo_legal_moves->moves[i], all_moves))
+		{
+			player_moves->moves[player_moves->count] = pseudo_legal_moves->moves[i];
+			player_moves->count++;
+		}
+		take_back();
+	}
+}

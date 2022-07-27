@@ -1,5 +1,6 @@
 #pragma once
 #include "Move.h"
+#include <chrono>
 #include <cstring>
 #include <vector>
 
@@ -50,7 +51,7 @@
 
 #define FLIP(sq) ((sq) ^ 56)
 
-#define MAX_PLY 128
+#define MAX_PLY 192
 
 #define hash_flag_exact 0
 
@@ -58,7 +59,7 @@
 
 #define hash_flag_beta 2
 
-#define hash_size 0xa00000
+#define hash_size 0xa000000
 
 #define no_hash_found 100000
 
@@ -427,8 +428,8 @@ public:
 	// 13 is castle rights as an integer (see castle rights for more info) (4 bit int)
 	// 14 is for en_passant index
 
-	uint64_t move_log[256] = {0};
-	std::string move_log_fen[256];
+	uint64_t move_log[512] = {0};
+	std::string move_log_fen[512];
 
 	// not A file constant
 	static const uint64_t not_a_file = 18374403900871474942ULL;
@@ -680,7 +681,7 @@ public:
 	void set_entry(int value, int depth, int flags, uint64_t best_move);
 	bool null_move_made = false;
 
-	uint64_t repetition_table[300];
+	uint64_t repetition_table[512];
 
 	int repetition_index;
 
@@ -719,4 +720,6 @@ public:
 	void update_game_state();
 
 	moves player_moves[1];
+
+	void legalize_player_moves(moves *player_moves, moves *pseudo_legal_moves);
 };
