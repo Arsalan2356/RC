@@ -6,8 +6,25 @@
 
 int main(int argc, char *argv[])
 {
+	bool use_nnue = true;
+	if (argc != 1)
+	{
+		if (argv[1] == "-u")
+		{
+			if (argv[2] == "E")
+			{
+				use_nnue = false;
+			}
+			else if (argv[2] == "N")
+			{
+				use_nnue = true;
+			}
+		}
+	}
 	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-	Board *board = new Board(fen);
+
+	Board *board = new Board(fen, true);
+	std::cout << "NNUE has been loaded" << (use_nnue ? "and is being used." : ", but is not being used.") << "\n";
 	while (true)
 	{
 		std::string input;
@@ -42,13 +59,111 @@ int main(int argc, char *argv[])
 				else if (inputs[1] == "search")
 				{
 					int depth = std::stoi(inputs[2]);
-					board->search_position(depth);
+					if (inputs.size() > 3)
+					{
+						if (inputs[3] == "both")
+						{
+							auto t1 = std::chrono::high_resolution_clock::now();
+							std::cout << "Engine Evaluation : "
+									  << "\n";
+							board->search_position(depth);
+							auto t2 = std::chrono::high_resolution_clock::now();
+							std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+							std::cout << ms_double.count() << "\n";
+							std::cout << "------------------------"
+									  << "\n";
+							t1 = std::chrono::high_resolution_clock::now();
+							std::cout << "NNUE Evaluation : "
+									  << "\n";
+							board->search_position_nnue(depth);
+							t2 = std::chrono::high_resolution_clock::now();
+							ms_double = t2 - t1;
+							std::cout << ms_double.count() << "\n";
+							std::cout << "------------------------"
+									  << "\n";
+						}
+						else if (inputs[3] == "engine")
+						{
+							auto t1 = std::chrono::high_resolution_clock::now();
+							board->search_position(depth);
+							auto t2 = std::chrono::high_resolution_clock::now();
+							std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+							std::cout << ms_double.count() << "\n";
+						}
+						else if (inputs[3] == "nnue")
+						{
+							auto t1 = std::chrono::high_resolution_clock::now();
+							board->search_position_nnue(depth);
+							auto t2 = std::chrono::high_resolution_clock::now();
+							std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+							std::cout << ms_double.count() << "\n";
+						}
+						else
+						{
+							auto t1 = std::chrono::high_resolution_clock::now();
+							(use_nnue ? board->search_position_nnue(depth) : board->search_position(depth));
+							auto t2 = std::chrono::high_resolution_clock::now();
+							std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+							std::cout << ms_double.count() << "\n";
+						}
+					}
+					else
+					{
+						(use_nnue ? board->search_position_nnue(depth) : board->search_position(depth));
+					}
 				}
 				else if (inputs[1] == "eval")
 				{
-					std::cout << board->evaluate() << "\n";
+					if (inputs.size() > 2)
+					{
+						if (inputs[2] == "both")
+						{
+							std::cout << "Engine Evaluation : "
+									  << "\n";
+							std::cout << board->evaluate() << "\n";
+							std::cout << "------------------------"
+									  << "\n";
+							std::cout << "NNUE Evaluation : "
+									  << "\n";
+							std::cout << board->nnue_eval() << "\n";
+							std::cout << "------------------------"
+									  << "\n";
+						}
+						else if (inputs[2] == "engine")
+						{
+							std::cout << board->evaluate() << "\n";
+						}
+						else if (inputs[3] == "nnue")
+						{
+							std::cout << board->nnue_eval() << "\n";
+						}
+						else
+						{
+							std::cout << (use_nnue ? board->nnue_eval() : board->evaluate()) << "\n";
+						}
+					}
+					else
+					{
+						std::cout << (use_nnue ? board->nnue_eval() : board->evaluate()) << "\n";
+					}
 				}
 			}
+			else if (inputs[0] == "use")
+			{
+				if (inputs[1] == "nnue")
+				{
+					use_nnue = true;
+					std::cout << "NNUE is now being used"
+							  << "\n";
+				}
+				else if (inputs[1] == "engine")
+				{
+					use_nnue = false;
+					std::cout << "NNUE is now disabled"
+							  << "\n";
+				}
+			}
+
 			else if (inputs[0] == "exit")
 			{
 				exit(0);

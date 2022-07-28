@@ -4,9 +4,9 @@
 
 int fen_to_sq(std::string fen);
 
-Board::Board(std::string &fen)
+Board::Board(std::string &fen, bool nnue)
 {
-	init_tables();
+	init_tables(nnue);
 	init(fen);
 };
 
@@ -189,12 +189,15 @@ void Board::init(std::string &fen)
 	reset_hashes();
 }
 
-void Board::init_tables()
+void Board::init_tables(bool nnue)
 {
 	srand(time(0));
 
-	std::cout << "Computing attack tables for non-sliding pieces"
-			  << "\n";
+	char nnue_name[] = "nn-eba324f53044.nnue";
+
+	std::cout
+		<< "Computing attack tables for non-sliding pieces"
+		<< "\n";
 
 	compute_attack_tables();
 	std::cout << "Done"
@@ -221,6 +224,10 @@ void Board::init_tables()
 	init_evaluation_masks();
 	std::cout << "Done"
 			  << "\n";
+	if (nnue)
+	{
+		init_nnue(nnue_name);
+	}
 }
 
 int fen_to_sq(std::string fen)

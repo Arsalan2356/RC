@@ -1,5 +1,6 @@
 #pragma once
 #include "Move.h"
+#include "nnue_eval.h"
 #include <chrono>
 #include <cstring>
 #include <vector>
@@ -10,18 +11,20 @@
 
 #define copy_board()                                                                \
 	uint64_t bitboards_copy[12], occupancies_copy[3], curr_zobrist_hash_copy;       \
-	int side_copy, en_passant_copy, castle_copy;                                    \
+	int side_copy, en_passant_copy, castle_copy, half_moves_copy;                   \
 	memcpy(bitboards_copy, bitboards, 96);                                          \
 	memcpy(occupancies_copy, occupancies, 24);                                      \
 	side_copy = side, en_passant_copy = en_passant_sq, castle_copy = castle_rights; \
-	curr_zobrist_hash_copy = curr_zobrist_hash;
+	curr_zobrist_hash_copy = curr_zobrist_hash;                                     \
+	half_moves_copy = half_moves;
 
 // restore board state
 #define take_back()                                                                 \
 	memcpy(bitboards, bitboards_copy, 96);                                          \
 	memcpy(occupancies, occupancies_copy, 24);                                      \
 	side = side_copy, en_passant_sq = en_passant_copy, castle_rights = castle_copy; \
-	curr_zobrist_hash = curr_zobrist_hash_copy;
+	curr_zobrist_hash = curr_zobrist_hash_copy;                                     \
+	half_moves = half_moves_copy;
 
 // extract source square
 #define get_move_source(move) (move & 0x3f)
@@ -77,9 +80,9 @@ class Board
 {
 private:
 public:
-	Board(std::string &fen);
+	Board(std::string &fen, bool nnue);
 	void init(std::string &fen);
-	void init_tables();
+	void init_tables(bool nnue);
 	bool populate_move(Move &move);
 	uint64_t get_all_squares(int piece, int pos);
 	int check_validity(uint64_t move);
@@ -449,10 +452,12 @@ public:
 	// 1st row constant
 	static const uint64_t row_1 = 65280ULL;
 
+	// Evaluation function
 	int evaluate();
+
 	int mg_value[12] = {82, 337, 365, 477, 1025, 0, -82, -337, -365, -477, -1025, 0};
 	int eg_value[12] = {94, 281, 297, 512, 936, 0, -94, -281, -297, -512, -936, 0};
-	int phase_inc[6] = {0, 4, 4, 8, 8, 0};
+	int phase_inc[6] = {0, 1, 1, 2, 4, 0};
 
 	int mg_pawn_table[64] = {
 		0, 0, 0, 0, 0, 0, 0, 0,				 //
@@ -722,4 +727,23 @@ public:
 	moves player_moves[1];
 
 	void legalize_player_moves(moves *player_moves, moves *pseudo_legal_moves);
+
+	int nnue_pieces[12] = {6, 5, 4, 3, 2, 1, 12, 11, 10, 9, 8, 7};
+
+	int nnue_squares[64] = {
+		a1, b1, c1, d1, e1, f1, g1, h1,
+		a2, b2, c2, d2, e2, f2, g2, h2,
+		a3, b3, c3, d3, e3, f3, g3, h3,
+		a4, b4, c4, d4, e4, f4, g4, h4,
+		a5, b5, c5, d5, e5, f5, g5, h5,
+		a6, b6, c6, d6, e6, f6, g6, h6,
+		a7, b7, c7, d7, e7, f7, g7, h7,
+		a8, b8, c8, d8, e8, f8, g8, h8
+
+	};
+
+	int nnue_eval();
+	uint64_t search_position_nnue(int depth);
+	int negamax_nnue(int alpha, int beta, int depth);
+	int quiescence_nnue(int alpha, int beta);
 };

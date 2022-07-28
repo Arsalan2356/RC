@@ -138,11 +138,19 @@ int Board::make_move(uint64_t move, int move_flag)
 		// Remove zobrist key from target pos
 		curr_zobrist_hash ^= zobrist_keys[piece][target_square];
 
+		half_moves++;
+
+		if (piece == P || piece == p)
+		{
+			half_moves = 0;
+		}
+
 		// handling capture moves
 		if (capture)
 		{
 			pop_bit(bitboards[capture_piece], target_square);
 			curr_zobrist_hash ^= zobrist_keys[capture_piece][target_square];
+			half_moves = 0;
 		}
 
 		// handle pawn promotions
