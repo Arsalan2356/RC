@@ -189,6 +189,9 @@ int Board::evaluate()
 		}
 	}
 
+	// Tempo
+	mg_score += 35;
+
 	int curr_phase = (phase * 256 + (24 / 2)) / 24;
 	int score = ((mg_score * (256 - curr_phase)) + (eg_score * curr_phase)) / 256;
 
@@ -918,54 +921,4 @@ void Board::init_evaluation_masks()
 			}
 		}
 	}
-}
-
-int Board::nnue_eval()
-{
-	uint64_t bitboard;
-
-	int piece, square;
-
-	int pieces[33];
-
-	int squares[33];
-
-	int index = 2;
-
-	for (int bb_piece = P; bb_piece <= k; bb_piece++)
-	{
-		bitboard = bitboards[bb_piece];
-
-		while (bitboard)
-		{
-			piece = bb_piece;
-
-			square = get_ls1b_index(bitboard);
-
-			if (piece == K)
-			{
-				pieces[0] = nnue_pieces[piece];
-				squares[0] = nnue_squares[square];
-			}
-			else if (piece == k)
-			{
-				pieces[1] = nnue_pieces[piece];
-				squares[1] = nnue_squares[square];
-			}
-
-			else
-			{
-				pieces[index] = nnue_pieces[piece];
-				squares[index] = nnue_squares[square];
-				index++;
-			}
-
-			pop_bit(bitboard, square);
-		}
-	}
-
-	pieces[index] = 0;
-	squares[index] = 0;
-
-	return (evaluate_nnue(side, pieces, squares) * (100 - half_moves) / 100);
 }

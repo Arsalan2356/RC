@@ -128,6 +128,7 @@ int main(int argc, char *argv[])
 	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << ms_double.count() << "\n";
 	std::cout << "NNUE has been loaded" << (use_nnue ? " and is being used." : ", but is not being used.") << "\n";
+	board->enable_nnue(use_nnue);
 	init_pieces(renderer);
 	moves temp_moves[1];
 
@@ -218,18 +219,10 @@ int main(int argc, char *argv[])
 				switch (event.key.keysym.sym)
 				{
 				case (SDLK_e):
-					t1 = std::chrono::high_resolution_clock::now();
 					board->search_position(8);
-					t2 = std::chrono::high_resolution_clock::now();
-					ms_double = t2 - t1;
-					std::cout << ms_double.count() << "\n";
 					break;
 				case (SDLK_n):
-					t1 = std::chrono::high_resolution_clock::now();
 					board->search_position_nnue(8);
-					t2 = std::chrono::high_resolution_clock::now();
-					ms_double = t2 - t1;
-					std::cout << ms_double.count() << "\n";
 					break;
 				case (SDLK_r):
 					board->init(fen);
@@ -244,22 +237,14 @@ int main(int argc, char *argv[])
 					}
 					break;
 				case (SDLK_h):
-					t1 = std::chrono::high_resolution_clock::now();
 					std::cout << "Engine Evaluation : "
 							  << "\n";
 					board->search_position(8);
-					t2 = std::chrono::high_resolution_clock::now();
-					ms_double = t2 - t1;
-					std::cout << ms_double.count() << "\n";
 					std::cout << "------------------------"
 							  << "\n";
-					t1 = std::chrono::high_resolution_clock::now();
 					std::cout << "NNUE Evaluation : "
 							  << "\n";
 					board->search_position_nnue(8);
-					t2 = std::chrono::high_resolution_clock::now();
-					ms_double = t2 - t1;
-					std::cout << ms_double.count() << "\n";
 					std::cout << "------------------------"
 							  << "\n";
 				default:

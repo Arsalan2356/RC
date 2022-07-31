@@ -5,13 +5,13 @@ all: release debug cmd cmd_debug
 
 
 release: $(FILES)
-	g++ -std=c++20 -Ofast -march=native -fno-signed-zeros -fno-trapping-math -frename-registers -fstack-usage -foptimize-sibling-calls -I src/include -L src/lib $(FILES) -o ./bin/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+	g++ -std=c++20 -Ofast -march=native -fno-signed-zeros -fno-trapping-math -frename-registers -foptimize-sibling-calls -I src/include -L src/lib $(FILES) -o ./bin/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
 
 debug: $(FILES)
-	g++ -std=c++20 -march=native -fstack-usage -foptimize-sibling-calls -g -ggdb -I src/include -L src/lib $(FILES) -o ./debug/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+	g++ -std=c++20 -march=native -foptimize-sibling-calls -g -ggdb -I src/include -L src/lib $(FILES) -o ./debug/main.exe -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
 
 cmd: $(CMD_FILES)
-	g++ -std=c++20 -Ofast -march=native -fno-signed-zeros -fno-trapping-math -frename-registers -fstack-usage -foptimize-sibling-calls $(CMD_FILES) -o ./bin/cmd.exe -lmingw32
+	g++ -std=c++20 -Ofast -march=native -fno-signed-zeros -fno-trapping-math -frename-registers -foptimize-sibling-calls $(CMD_FILES) -o ./bin/cmd.exe -lmingw32
 
 cmd_debug: $(CMD_FILES)
-	g++ -std=c++20 -march=native -fstack-usage -foptimize-sibling-calls -g -ggdb $(CMD_FILES) -o ./debug/cmd.exe -lmingw32
+	g++ -std=c++20 -march=native -foptimize-sibling-calls -g -ggdb $(CMD_FILES) -o ./debug/cmd.exe -lmingw32

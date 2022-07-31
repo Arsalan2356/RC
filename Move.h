@@ -37,4 +37,6 @@ public:
 	void to_pgn(std::string &pgn, int diff);
 	bool operator==(const Move &rhs);
 	static uint64_t create_id(int square_from, int square_to, int piece, int promoted, int capture_flag, int double_flag, int en_passant_flag, int castle_flag, int capture_piece);
+
+	static std::string piece_names(int piece_num);
 };

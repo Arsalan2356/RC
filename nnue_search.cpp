@@ -483,3 +483,58 @@ int Board::quiescence_nnue(int alpha, int beta)
 	// node (move) fails low
 	return alpha;
 }
+
+int Board::nnue_eval()
+{
+	uint64_t bitboard;
+
+	int piece, square;
+
+	int pieces[33];
+
+	int squares[33];
+
+	int index = 2;
+
+	for (int bb_piece = P; bb_piece <= k; bb_piece++)
+	{
+		bitboard = bitboards[bb_piece];
+
+		while (bitboard)
+		{
+			piece = bb_piece;
+
+			square = get_ls1b_index(bitboard);
+
+			if (piece == K)
+			{
+				pieces[0] = nnue_pieces[piece];
+				squares[0] = nnue_squares[square];
+			}
+			else if (piece == k)
+			{
+				pieces[1] = nnue_pieces[piece];
+				squares[1] = nnue_squares[square];
+			}
+
+			else
+			{
+				pieces[index] = nnue_pieces[piece];
+				squares[index] = nnue_squares[square];
+				index++;
+			}
+
+			pop_bit(bitboard, square);
+		}
+	}
+
+	pieces[index] = 0;
+	squares[index] = 0;
+
+	return (evaluate_nnue(side, pieces, squares) * (100 - half_moves) / 100);
+}
+
+void Board::enable_nnue(bool use_nnue)
+{
+	this->use_nnue = use_nnue;
+}

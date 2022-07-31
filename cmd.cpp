@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 	Board *board = new Board(fen, true);
-	std::cout << "NNUE has been loaded" << (use_nnue ? "and is being used." : ", but is not being used.") << "\n";
+	std::cout << "NNUE has been loaded" << (use_nnue ? " and is being used." : ", but is not being used.") << "\n";
 	while (true)
 	{
 		std::string input;
@@ -58,57 +58,38 @@ int main(int argc, char *argv[])
 				}
 				else if (inputs[1] == "search")
 				{
-					int depth = std::stoi(inputs[2]);
 					if (inputs.size() > 3)
 					{
-						if (inputs[3] == "both")
+						int depth = std::stoi(inputs[3]);
+						if (inputs[2] == "both")
 						{
-							auto t1 = std::chrono::high_resolution_clock::now();
 							std::cout << "Engine Evaluation : "
 									  << "\n";
 							board->search_position(depth);
-							auto t2 = std::chrono::high_resolution_clock::now();
-							std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-							std::cout << ms_double.count() << "\n";
 							std::cout << "------------------------"
 									  << "\n";
-							t1 = std::chrono::high_resolution_clock::now();
 							std::cout << "NNUE Evaluation : "
 									  << "\n";
 							board->search_position_nnue(depth);
-							t2 = std::chrono::high_resolution_clock::now();
-							ms_double = t2 - t1;
-							std::cout << ms_double.count() << "\n";
 							std::cout << "------------------------"
 									  << "\n";
 						}
-						else if (inputs[3] == "engine")
+						else if (inputs[2] == "engine")
 						{
-							auto t1 = std::chrono::high_resolution_clock::now();
 							board->search_position(depth);
-							auto t2 = std::chrono::high_resolution_clock::now();
-							std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-							std::cout << ms_double.count() << "\n";
 						}
-						else if (inputs[3] == "nnue")
+						else if (inputs[2] == "nnue")
 						{
-							auto t1 = std::chrono::high_resolution_clock::now();
 							board->search_position_nnue(depth);
-							auto t2 = std::chrono::high_resolution_clock::now();
-							std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-							std::cout << ms_double.count() << "\n";
 						}
 						else
 						{
-							auto t1 = std::chrono::high_resolution_clock::now();
 							(use_nnue ? board->search_position_nnue(depth) : board->search_position(depth));
-							auto t2 = std::chrono::high_resolution_clock::now();
-							std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-							std::cout << ms_double.count() << "\n";
 						}
 					}
 					else
 					{
+						int depth = std::stoi(inputs[2]);
 						(use_nnue ? board->search_position_nnue(depth) : board->search_position(depth));
 					}
 				}

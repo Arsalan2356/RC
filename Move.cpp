@@ -103,7 +103,7 @@ uint64_t Move::create_id(int square_from, int square_to, int piece, int promoted
 }
 
 // Independent of color (no need to add 6 for black)
-std::string piece_names(int piece_num)
+std::string Move::piece_names(int piece_num)
 {
 	if (piece_num % 6 == 1)
 	{

@@ -742,6 +742,9 @@ public:
 
 	};
 
+	bool use_nnue = false;
+
+	void enable_nnue(bool use_nnue);
 	int nnue_eval();
 	uint64_t search_position_nnue(int depth);
 	int negamax_nnue(int alpha, int beta, int depth);
