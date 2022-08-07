@@ -39,7 +39,7 @@ void Board::init(std::string &fen)
 	for (int i = 0; i < 256; i++)
 	{
 		move_log[i] = -1;
-		move_log_fen[i] = "";
+		move_log_pgn[i] = "";
 	}
 
 	half_moves = 0;

@@ -296,7 +296,7 @@ void Board::update_log(uint64_t move)
 	std::string pgn = "";
 
 	move_x.to_pgn(pgn, diff_calc(move));
-	move_log_fen[move_index] = pgn;
+	move_log_pgn[move_index] = pgn;
 	std::cout << pgn << "\n";
 }
 
@@ -436,61 +436,6 @@ int Board::check_validity(uint64_t move)
 	}
 
 	return 0;
-}
-
-uint64_t Board::get_all_squares(int piece, int pos)
-{
-	uint64_t moves = 0ULL;
-	int target_square = (side == white ? pos - 8 : pos + 8);
-	switch (piece % 6)
-	{
-	case P:
-
-		if (side == white)
-		{
-			if (!(target_square < a8) && !get_bit(occupancies[both], target_square))
-			{
-				set_bit(moves, target_square);
-			}
-			if ((pos >= a2 && pos <= h2) && !get_bit(occupancies[both], target_square - 8))
-			{
-				set_bit(moves, target_square - 8);
-			}
-			moves |= (pawn_attacks[white][pos] & occupancies[black]);
-		}
-		else
-		{
-			if (!(target_square > h1) && !get_bit(occupancies[both], target_square))
-			{
-				set_bit(moves, target_square);
-			}
-			if ((pos >= a7 && pos <= h7) && !get_bit(occupancies[both], target_square + 8))
-			{
-				set_bit(moves, target_square + 8);
-			}
-			moves |= (pawn_attacks[black][pos] & occupancies[white]);
-		}
-		break;
-	case N:
-		moves = knight_attacks[pos];
-		break;
-	case B:
-		moves = get_bishop_attacks(pos, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
-		break;
-	case R:
-		moves = get_rook_attacks(pos, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
-		break;
-	case Q:
-		moves = get_queen_attacks(pos, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
-		break;
-	case K:
-		moves = king_attacks[pos];
-		break;
-	default:
-		break;
-	}
-
-	return moves;
 }
 
 void Board::legalize_player_moves(moves *player_moves, moves *pseudo_legal_moves)

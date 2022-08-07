@@ -38,6 +38,7 @@ int Board::evaluate()
 			switch (piece)
 			{
 			case P:
+				// Check for doubled pawns
 				num_pawns = count_bits(bitboards[P] & file_masks[square]);
 
 				if (num_pawns > 1)
@@ -47,6 +48,7 @@ int Board::evaluate()
 					eg_score += num_pawns * double_pawn_penalty;
 				}
 
+				// Check for isolated pawns
 				if (bitboards[P] & isolated_pawn_masks[square] == 0)
 				{
 					mg_score += isolated_pawn_penalty;
@@ -57,7 +59,7 @@ int Board::evaluate()
 					mg_score += count_bits(bitboards[P] & isolated_pawn_masks[square]) * (-isolated_pawn_penalty);
 					eg_score += 1.1 * count_bits(bitboards[P] & isolated_pawn_masks[square]) * (-isolated_pawn_penalty);
 				}
-
+				// Check for passed pawns
 				if (white_passed_pawn_masks[square] & bitboards[p] == 0)
 				{
 					mg_score += passed_pawn_bonus[7 - (square / 8)];
@@ -67,11 +69,12 @@ int Board::evaluate()
 			case N:
 				break;
 			case B:
+				// Add score based on mobility
 				mg_score += count_bits(get_bishop_attacks(square, occupancies[both]));
 				eg_score += count_bits(get_bishop_attacks(square, occupancies[both])) * 1.1;
 				break;
 			case R:
-
+				// Open/Semi-Open files get bonuses for rooks
 				if ((bitboards[P] | bitboards[p]) & file_masks[square] == 0)
 				{
 					mg_score += open_file_score;
@@ -85,10 +88,12 @@ int Board::evaluate()
 
 				break;
 			case Q:
+				// Add score based on mobility
 				mg_score += count_bits(get_queen_attacks(square, occupancies[both]));
 				eg_score += count_bits(get_queen_attacks(square, occupancies[both])) * 1.1;
 				break;
 			case K:
+				// Add score based on mobility
 				if ((bitboards[P] | bitboards[p]) & file_masks[square] == 0)
 				{
 					mg_score += open_file_score;
@@ -102,6 +107,7 @@ int Board::evaluate()
 				}
 				break;
 			case p:
+				// Check for doubled pawns
 				num_pawns = count_bits(bitboards[p] & file_masks[square]);
 
 				if (num_pawns > 1)
@@ -111,6 +117,7 @@ int Board::evaluate()
 					eg_score += num_pawns * double_pawn_penalty;
 				}
 
+				// Check for isolated pawns
 				if (bitboards[p] & isolated_pawn_masks[square] == 0)
 				{
 					mg_score += isolated_pawn_penalty;
@@ -121,7 +128,7 @@ int Board::evaluate()
 					mg_score += count_bits(bitboards[p] & isolated_pawn_masks[square]) * (-isolated_pawn_penalty);
 					eg_score += 1.1 * count_bits(bitboards[p] & isolated_pawn_masks[square]) * (-isolated_pawn_penalty);
 				}
-
+				// Check for passed pawns
 				if (black_passed_pawn_masks[square] & bitboards[P] == 0)
 				{
 					mg_score += passed_pawn_bonus[7 - (square / 8)];
@@ -131,10 +138,12 @@ int Board::evaluate()
 			case n:
 				break;
 			case b:
+				// Add score based on mobility
 				mg_score += count_bits(get_bishop_attacks(square, occupancies[both]));
 				eg_score += count_bits(get_bishop_attacks(square, occupancies[both])) * 1.1;
 				break;
 			case r:
+				// Open/Semi-Open files get bonuses for rooks
 				if ((bitboards[P] | bitboards[p]) & file_masks[square] == 0)
 				{
 					mg_score += open_file_score;
@@ -147,10 +156,12 @@ int Board::evaluate()
 				}
 				break;
 			case q:
+				// Add score based on mobility
 				mg_score += count_bits(get_queen_attacks(square, occupancies[both]));
 				eg_score += count_bits(get_queen_attacks(square, occupancies[both])) * 1.1;
 				break;
 			case k:
+				// Add score based on mobility
 				if ((bitboards[P] | bitboards[p]) & file_masks[square] == 0)
 				{
 					mg_score += open_file_score;
@@ -192,12 +203,15 @@ int Board::evaluate()
 	// Tempo
 	mg_score += 35;
 
+	// Calculate current game phase using pieces
 	int curr_phase = (phase * 256 + (24 / 2)) / 24;
+	// Interpolate score based on current game phase
 	int score = ((mg_score * (256 - curr_phase)) + (eg_score * curr_phase)) / 256;
 
 	return (side == white ? score : -score);
 }
 
+// Attribute (hot) tells the compiler that this code will be run many times
 __attribute__((hot)) uint64_t Board::search_position(int depth)
 {
 	if (is_checkmate)
@@ -210,6 +224,8 @@ __attribute__((hot)) uint64_t Board::search_position(int depth)
 	memset(history_moves, 0, sizeof(history_moves));
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
+
+	// Clear helper values for search
 	nodes = 0ULL;
 
 	follow_pv = 0;
@@ -251,6 +267,7 @@ __attribute__((hot)) uint64_t Board::search_position(int depth)
 
 		score = negamax(alpha, beta, current_depth);
 
+		// Check if score is out of bounds and reset it
 		if ((score <= alpha) || (score >= beta))
 		{
 			alpha = -50000;
@@ -269,6 +286,7 @@ __attribute__((hot)) uint64_t Board::search_position(int depth)
 	Move move_x = Move(pv_table[0][0]);
 	std::string pgn = "";
 	move_x.to_pgn(pgn, diff_calc(pv_table[0][0]));
+	// Output information about the score
 	if (score > -49000 && score < -48000)
 	{
 		std::cout << "Best Move : " << pgn << "\n"
@@ -294,22 +312,27 @@ __attribute__((hot)) uint64_t Board::search_position(int depth)
 	return pv_table[0][0];
 }
 
-int Board::negamax(int alpha, int beta, int depth)
+// Attribute (hot) tells the compiler that this code will be run many times
+__attribute__((hot)) int Board::negamax(int alpha, int beta, int depth)
 {
+	// Set pv_length at this ply
 	pv_length[ply] = ply;
 
 	// Static evaluation
 	int score = 0;
 
+	// Initial hash flag assumption
 	int hash_flag = hash_flag_alpha;
 
 	uint64_t best_move = 0;
 
+	// Check if there are repetitions or more than 50 half moves
 	if (ply && is_repetition() || half_moves > 50)
 	{
 		return 0;
 	}
 
+	// Check if the current node is a pv (principle variation) node
 	int pv_node = (beta - alpha > 1);
 
 	score = read_hash_entry(alpha, beta, depth, &best_move);
@@ -324,7 +347,7 @@ int Board::negamax(int alpha, int beta, int depth)
 		// run quiescence search
 		return quiescence(alpha, beta);
 
-	//
+	// Don't go past the max ply
 	if (ply > MAX_PLY - 1)
 	{
 		return evaluate();
@@ -344,6 +367,7 @@ int Board::negamax(int alpha, int beta, int depth)
 	// legal moves counter
 	int legal_moves = 0;
 
+	// Check with static eval to see if the position is worth evaluating
 	int static_eval = evaluate();
 
 	if (depth < 3 && !pv_node && !in_check && (abs(beta - 1) > -50000 + 100))
@@ -393,14 +417,18 @@ int Board::negamax(int alpha, int beta, int depth)
 	}
 	else
 	{
+		// Reset the null move
+		// Also doesn't allow multiple null moves in the same ply
 		if (null_move_made)
 		{
 			null_move_made = false;
 		}
 	}
 
+	// Use static evaluation for low depth values (ending values)
 	if (!pv_node && !in_check && depth <= 3)
 	{
+		// Check if value + 125 causes beta cutoff for depth <= 3
 		score = static_eval + 125;
 
 		int new_score = 0;
@@ -414,6 +442,8 @@ int Board::negamax(int alpha, int beta, int depth)
 				return (new_score > score) ? new_score : score;
 			}
 		}
+
+		// Check if value + 300 causes beta cutoff for depth <= 2
 
 		score += 175;
 
@@ -482,6 +512,8 @@ int Board::negamax(int alpha, int beta, int depth)
 		}
 		else
 		{
+			// Reduce window if we've searched more moves than specified
+			// Still checks fully if the move is a capture or a promotion
 			if (moves_searched >= full_depth_moves && ply >= reduction_limit && in_check == 0 && get_move_capture(move_list->moves[count]) == 0 && get_move_promoted(move_list->moves[count]) == 0)
 			{
 				score = -negamax(-alpha - 1, -alpha, depth - 2);
@@ -513,7 +545,7 @@ int Board::negamax(int alpha, int beta, int depth)
 		// found a better move
 		if (score > alpha)
 		{
-
+			// Set hash flag for reading
 			hash_flag = hash_flag_exact;
 
 			best_move = move_list->moves[count];
@@ -542,6 +574,7 @@ int Board::negamax(int alpha, int beta, int depth)
 
 				if (get_move_capture(move_list->moves[count]) == 0)
 				{
+					// Killer moves are the beta cutoff moves that aren't captures
 					killer_moves[1][ply] = killer_moves[0][ply];
 					killer_moves[0][ply] = move_list->moves[count];
 				}
@@ -574,6 +607,7 @@ int Board::negamax(int alpha, int beta, int depth)
 
 int Board::score_move(uint64_t move)
 {
+	// Moves from the pv table should predictably score high
 	if (score_pv)
 	{
 		if (pv_table[0][ply] == move)
@@ -594,14 +628,14 @@ int Board::score_move(uint64_t move)
 	// score quiet move
 	else
 	{
-		// Score first killer move
-
+		// First killer move scores as high as possible without scoring over
+		// captures
 		if (killer_moves[0][ply] == move)
 		{
 			return 90;
 		}
-		// Score second killer move
-
+		// Second killer move scores as high as possible without scoring over
+		// the first killer move and captures
 		else if (killer_moves[1][ply] == move)
 		{
 			return 80;
@@ -620,6 +654,7 @@ int Board::quiescence(int alpha, int beta)
 	// increment nodes count
 	nodes++;
 
+	// Don't go past the max ply
 	if (ply > MAX_PLY - 1)
 	{
 		return evaluate();
@@ -636,8 +671,10 @@ int Board::quiescence(int alpha, int beta)
 	}
 
 	// Delta Pruning
+	// Set delta to be an approximate queen value
 	int delta = 975;
 
+	// Add to delta if it's a promotion for either side
 	if (side == white)
 	{
 		if (bitboards[0] & row_7)
@@ -653,6 +690,9 @@ int Board::quiescence(int alpha, int beta)
 		}
 	}
 
+	// Check if the largest possible swing will improve alpha
+	// Otherwise don't bother testing the move since it's a
+	// hopeless position
 	if (evaluation < alpha - delta)
 	{
 		return alpha;
@@ -744,6 +784,7 @@ int Board::sort_moves(moves *move_list, uint64_t best_move)
 		}
 	}
 
+	// Selection Sort
 	int i = 1;
 	while (i < move_list->count)
 	{
@@ -761,12 +802,6 @@ int Board::sort_moves(moves *move_list, uint64_t best_move)
 		move_list->moves[j + 1] = move;
 		i++;
 	}
-
-	// for (int i = 0; i < move_list->count; i++)
-	// {
-	// 	std::cout << "Move: " << move_list->moves[i] << " Score: " << move_scores[i] << "\n";
-	// }
-	// exit(0);
 	return 1;
 }
 
@@ -813,7 +848,8 @@ int Board::read_hash_entry(int alpha, int beta, int depth, uint64_t *best_move)
 			{
 				value -= ply;
 			}
-
+			// Read the flags and return different values depending on the
+			// accuracy of the move's score
 			if (hash_entry->flags == hash_flag_exact)
 			{
 				return value;
@@ -856,6 +892,7 @@ void Board::set_entry(int value, int depth, int flags, uint64_t best_move)
 
 int Board::is_repetition()
 {
+	// Check if the move follows a repetition pattern
 	for (int i = 0; i < repetition_index; i++)
 	{
 		if (repetition_table[i] == curr_zobrist_hash)
@@ -869,6 +906,7 @@ int Board::is_repetition()
 uint64_t Board::set_file_rank_mask(int file, int rank)
 {
 	uint64_t mask = 0ULL;
+	// Set mask for each rank or file
 
 	for (int r = 0; r < 8; r++)
 	{
@@ -891,6 +929,7 @@ uint64_t Board::set_file_rank_mask(int file, int rank)
 
 void Board::init_evaluation_masks()
 {
+	// Inits all evaluation masks used in the evaluation function
 	for (int r = 0; r < 8; r++)
 	{
 		for (int f = 0; f < 8; f++)

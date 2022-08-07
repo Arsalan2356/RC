@@ -50,8 +50,10 @@
 // extract castling flag
 #define get_move_castling(move) (move & 0x800000)
 
+// extract capture piece flag
 #define get_move_capture_piece(move) ((move & 0xf000000) >> 24)
 
+// Flip square to the other side
 #define FLIP(sq) ((sq) ^ 56)
 
 #define MAX_PLY 192
@@ -78,43 +80,55 @@ typedef struct
 } moves;
 class Board
 {
-private:
 public:
+	// Constructor for board
 	Board(std::string &fen, bool nnue);
+
+	// Init functions for the constructor
 	void init(std::string &fen);
 	void init_tables(bool nnue);
-	bool populate_move(Move &move);
-	uint64_t get_all_squares(int piece, int pos);
-	int check_validity(uint64_t move);
-	int make_move(uint64_t move, int move_flag);
-	void update_log(uint64_t move);
-	void compute_attack_tables();
-	void compute_sliding_tables();
-	uint64_t find_magic_number(int square, int relevant_bits, int flag);
 	void init_magic_numbers();
-	uint64_t get_magic_number();
-	uint64_t random_uint64();
-	uint64_t bishop_attacks_on_the_fly(int square, uint64_t block);
-	uint64_t rook_attacks_on_the_fly(int square, uint64_t block);
-	uint64_t (Board::*attack_function)(int square, uint64_t block);
-	uint64_t set_occupancy(int index, int bits, uint64_t attack_mask);
-	uint64_t get_bishop_attacks(int square, uint64_t occupancy);
-	uint64_t get_rook_attacks(int square, uint64_t occupancy);
-	uint64_t get_queen_attacks(int square, uint64_t occupancy);
-	int is_square_attacked(int square, int side);
-	void generate_moves(moves *move_list);
-	void generate_captures(moves *move_list);
-	void add_move(moves *move_list, int move);
+
+	// Populates moves that the user inputs
+	bool populate_move(Move &move);
+
+	// Checks the validity of a move
+	int check_validity(uint64_t move);
+
+	// Makes a move on the current board
+	int make_move(uint64_t move, int move_flag);
+
+	// Updates the move log and the fen notations
+	void update_log(uint64_t move);
+
+	// This function is only called when a move is made by the user
+	// or when the computer finally decides on the best move
+	// This is not called in the search functions
+	void update_game_state();
+
+	// Mask attacks for each piece before computing them
 	uint64_t mask_pawn_attacks(int side, int square);
 	uint64_t mask_knight_attacks(int square);
 	uint64_t mask_bishop_attacks(int sq);
 	uint64_t mask_rook_attacks(int sq);
 	uint64_t mask_king_attacks(int square);
-	void perft(int depth);
-	void perft_depth(int depth);
-	void perft_divide(int depth);
-	uint64_t nodes = 0ULL;
 
+	// Computes attack tables for all pieces
+	void compute_attack_tables();
+	void compute_sliding_tables();
+	uint64_t set_occupancy(int index, int bits, uint64_t attack_mask);
+
+	// Magic numbers generation functions
+	uint64_t find_magic_number(int square, int relevant_bits, int flag);
+	uint64_t get_magic_number();
+	uint64_t random_uint64();
+	uint64_t bishop_attacks_on_the_fly(int square, uint64_t block);
+	uint64_t rook_attacks_on_the_fly(int square, uint64_t block);
+
+	// This is a pointer to a method assigned in the find magic function
+	uint64_t (Board::*attack_function)(int square, uint64_t block);
+
+	// Hardcoded magic numbers for bishops and rooks
 	uint64_t bishop_magic_numbers[64] = {0x40040844404084ULL,
 										 0x2004208a004208ULL,
 										 0x10190041080202ULL,
@@ -243,10 +257,39 @@ public:
 									   0x12001008414402ULL,
 									   0x2006104900a0804ULL,
 									   0x1004081002402ULL};
+
+	// Gets attacks for each of the sliding pieces
+	uint64_t get_bishop_attacks(int square, uint64_t occupancy);
+	uint64_t get_rook_attacks(int square, uint64_t occupancy);
+	uint64_t get_queen_attacks(int square, uint64_t occupancy);
+
+	// Checks if a square is attacked by the opposite side
+	int is_square_attacked(int square, int side);
+
+	// Move generation functions
+	void generate_moves(moves *move_list);
+	void generate_captures(moves *move_list);
+	void add_move(moves *move_list, int move);
+
+	// Perft (Performance Test) Functions
+	uint64_t nodes = 0ULL;
+	void perft(int depth);
+	void perft_depth(int depth);
+	void perft_divide(int depth);
+
+	// Side whose turn it is to move
 	int side;
+	enum
+	{
+		white,
+		black,
+		both
+	};
+
 	static int get_ls1b_index(uint64_t board);
 	static int count_bits(uint64_t board);
 
+	// Square names to numbers for positions for readability
 	enum
 	{
 		a8,
@@ -316,6 +359,8 @@ public:
 		no_sq
 	};
 
+	// Array to calculate new castling rights
+	// after each move
 	const int castling_rights[64] = {
 		7, 15, 15, 15, 3, 15, 15, 11,
 		15, 15, 15, 15, 15, 15, 15, 15,
@@ -324,7 +369,13 @@ public:
 		15, 15, 15, 15, 15, 15, 15, 15,
 		15, 15, 15, 15, 15, 15, 15, 15,
 		15, 15, 15, 15, 15, 15, 15, 15,
-		13, 15, 15, 15, 12, 15, 15, 14};
+		13, 15, 15, 15, 12, 15, 15, 14
+
+	};
+
+	// Enum for pieces
+	// White is (0 - 5)
+	// Black is (6 - 11)
 	enum
 	{
 		P,
@@ -340,23 +391,20 @@ public:
 		q,
 		k
 	};
-	enum
-	{
-		white,
-		black,
-		both
-	};
-	enum
-	{
-		rook,
-		bishop
-	};
+
+	// Enum for whether to check for all moves or captures
 	enum
 	{
 		all_moves,
 		only_captures
 	};
+
+	// Bitboards for all pieces
+	// Same order as the enum
 	uint64_t bitboards[12];
+
+	// Occupancies for both sides
+	// Same order as the side enums
 	uint64_t occupancies[3];
 
 	// Castle rights are stored in the order they are produced in the FEN
@@ -400,6 +448,8 @@ public:
 	// rook attacks rable [square][occupancies]
 	uint64_t rook_attacks[64][4096];
 
+	// Relevant bits for bishops
+	// These are the possible moves from each position
 	const int bishop_relevant_bits[64] = {
 		6, 5, 5, 5, 5, 5, 5, 6,
 		5, 5, 5, 5, 5, 5, 5, 5,
@@ -412,6 +462,8 @@ public:
 
 	};
 
+	// Relevant bits for rooks
+	// These are the possible moves from each position
 	const int rook_relevant_bits[64] = {
 		12, 11, 11, 11, 11, 11, 11, 12,
 		11, 10, 10, 10, 10, 10, 10, 11,
@@ -425,25 +477,23 @@ public:
 	};
 
 	int en_passant_sq = no_sq;
-	// 0 - 5 are white pieces
-	// 6 - 11 are black pieces
-	// 12 is current move (1 for white, 0 for black)
-	// 13 is castle rights as an integer (see castle rights for more info) (4 bit int)
-	// 14 is for en_passant index
 
+	// Move log and Move log in pgn notation
 	uint64_t move_log[512] = {0};
-	std::string move_log_fen[512];
+	std::string move_log_pgn[512];
+	// Disambiguating moves for pgn notation
+	int diff_calc(uint64_t move);
 
-	// not A file constant
+	// not-A file constant
 	static const uint64_t not_a_file = 18374403900871474942ULL;
 
-	// not H file constant
+	// not-H file constant
 	static const uint64_t not_h_file = 9187201950435737471ULL;
 
-	// not HG file constant
+	// not-HG file constant
 	static const uint64_t not_hg_file = 4557430888798830399ULL;
 
-	// not AB file constant
+	// not-AB file constant
 	static const uint64_t not_ab_file = 18229723555195321596ULL;
 
 	// 7th row constant
@@ -455,10 +505,14 @@ public:
 	// Evaluation function
 	int evaluate();
 
+	// Midgame and Endgame values for each piece
 	int mg_value[12] = {82, 337, 365, 477, 1025, 0, -82, -337, -365, -477, -1025, 0};
 	int eg_value[12] = {94, 281, 297, 512, 936, 0, -94, -281, -297, -512, -936, 0};
+
+	// Phase increments for each piece disregarding color
 	int phase_inc[6] = {0, 1, 1, 2, 4, 0};
 
+	// Pawn positions table mid game and endgame
 	int mg_pawn_table[64] = {
 		0, 0, 0, 0, 0, 0, 0, 0,				 //
 		98, 134, 61, 95, 68, 126, 34, -11,	 //
@@ -481,6 +535,7 @@ public:
 		0, 0, 0, 0, 0, 0, 0, 0,					//
 	};
 
+	// Knight positions table mid game and endgame
 	int mg_knight_table[64] = {
 		-167, -89, -34, -49, 61, -97, -15, -107, //
 		-73, -41, 72, 36, 23, 62, 7, -17,		 //
@@ -503,6 +558,7 @@ public:
 		-29, -51, -23, -15, -22, -18, -50, -64, //
 	};
 
+	// Bishop positions table mid game and endgame
 	int mg_bishop_table[64] = {
 		-29, 4, -82, -37, -25, -42, 7, -8,	   //
 		-26, 16, -18, -13, 30, 59, 18, -47,	   //
@@ -525,6 +581,7 @@ public:
 		-23, -9, -23, -5, -9, -16, -5, -17,	 //
 	};
 
+	// Rook positions table mid game and endgame
 	int mg_rook_table[64] = {
 		32, 42, 32, 51, 63, 9, 31, 43,		//
 		27, 32, 58, 62, 80, 67, 26, 44,		//
@@ -547,6 +604,7 @@ public:
 		-9, 2, 3, -1, -5, -13, 4, -20,	 //
 	};
 
+	// Queen positions table mid game and endgame
 	int mg_queen_table[64] = {
 		-28, 0, 29, 12, 59, 44, 43, 45,		 //
 		-24, -39, -5, 1, -16, 57, 28, 54,	 //
@@ -569,6 +627,7 @@ public:
 		-33, -28, -22, -43, -5, -32, -20, -41,	//
 	};
 
+	// King positions table mid game and endgame
 	int mg_king_table[64] = {
 		-65, 23, 16, -15, -56, -34, 2, 13,		//
 		29, -1, -20, -7, -8, -4, -38, -29,		//
@@ -591,6 +650,7 @@ public:
 		-53, -34, -21, -11, -28, -14, -24, -43 //
 	};
 
+	// All midgame piece scores
 	int *mg_piece_scores[6] = {
 		mg_pawn_table,
 		mg_knight_table,
@@ -601,6 +661,7 @@ public:
 
 	};
 
+	// All endgame piece scores
 	int *eg_piece_scores[6] = {
 		eg_pawn_table,
 		eg_knight_table,
@@ -613,10 +674,12 @@ public:
 
 	int ply = 0;
 
+	// Position Searching Functions
 	int negamax(int alpha, int beta, int depth);
 	uint64_t search_position(int depth);
 	int quiescence(int alpha, int beta);
 
+	// Most Valuable Victim - Least Valuable Attacker
 	// MVV LVA [attacker][victim]
 	int mvv_lva[12][12] = {
 		105, 205, 305, 405, 505, 605, 105, 205, 305, 405, 505, 605,
@@ -635,38 +698,37 @@ public:
 
 	};
 
+	// Move Ordering
 	int score_move(uint64_t move);
 	int sort_moves(moves *move_list, uint64_t best_move);
 
-	// Stores two killer moves for 128 ply
+	// Stores two killer moves for 192 ply
 	int killer_moves[2][MAX_PLY];
 
 	// Stores history moves for each piece and square combination
 	int history_moves[12][64];
 
+	// PV-tables, PV Searching
 	int pv_length[MAX_PLY];
-
 	uint64_t pv_table[MAX_PLY][MAX_PLY];
-
 	int follow_pv, score_pv;
-
 	void enable_pv(moves *move_list);
 
+	// Number of moves searched to full depth
 	const int full_depth_moves = 4;
+
+	// Depth at which to start reducing
 	const int reduction_limit = 3;
 
+	// Depth to reduce by
 	const int reduce = 2;
 
+	// Zobrist Hashing
 	uint64_t curr_zobrist_hash;
-
 	uint64_t zobrist_keys[12][64];
-
 	uint64_t en_passant_zobrist[64];
-
 	uint64_t castle_zobrist[16];
-
 	uint64_t zobrist_side_key;
-
 	void init_zobrist();
 
 	typedef struct tag_hash
@@ -684,52 +746,47 @@ public:
 
 	int read_hash_entry(int alpha, int beta, int depth, uint64_t *best_move);
 	void set_entry(int value, int depth, int flags, uint64_t best_move);
+
+	// Null Moves
 	bool null_move_made = false;
 
+	// Repetitions
 	uint64_t repetition_table[512];
-
 	int repetition_index;
-
 	int is_repetition();
 
+	// Evaluation Masks
 	uint64_t file_masks[64] = {0};
-
 	uint64_t rank_masks[64] = {0};
-
 	uint64_t isolated_pawn_masks[64] = {0};
-
 	uint64_t white_passed_pawn_masks[64] = {0};
-
 	uint64_t black_passed_pawn_masks[64] = {0};
-
 	uint64_t set_file_rank_mask(int file, int rank);
-
-	int double_pawn_penalty = -10;
-
-	int isolated_pawn_penalty = -10;
-
 	void init_evaluation_masks();
 
+	// Evaluation Bonuses and Penalties
+	int double_pawn_penalty = -10;
+	int isolated_pawn_penalty = -10;
 	// passed pawn bonus
 	const int passed_pawn_bonus[8] = {0, 5, 15, 20, 50, 70, 110, 160};
-
+	// Open/Semi-Open File Bonuses
 	const int semi_open_file_score = 10;
-
 	const int open_file_score = 25;
 
+	// Checkmate/Stalemate values
 	bool is_checkmate;
-
 	bool is_stalemate;
 
-	int diff_calc(uint64_t move);
-	void update_game_state();
-
+	// Player's possible moves for highlighting
 	moves player_moves[1];
 
+	// Legalizing their moves
 	void legalize_player_moves(moves *player_moves, moves *pseudo_legal_moves);
 
+	// NNUE pieces used by the Stockfish NNUE
 	int nnue_pieces[12] = {6, 5, 4, 3, 2, 1, 12, 11, 10, 9, 8, 7};
 
+	// Squares ordered for use in the Stockfish NNUE
 	int nnue_squares[64] = {
 		a1, b1, c1, d1, e1, f1, g1, h1,
 		a2, b2, c2, d2, e2, f2, g2, h2,
@@ -742,9 +799,11 @@ public:
 
 	};
 
+	// Whether to use NNUE or not
 	bool use_nnue = false;
-
 	void enable_nnue(bool use_nnue);
+
+	// All eval functions rewritten for the NNUE instead
 	int nnue_eval();
 	uint64_t search_position_nnue(int depth);
 	int negamax_nnue(int alpha, int beta, int depth);
