@@ -1,9 +1,7 @@
 #include "Board.h"
 
-__attribute__((hot)) uint64_t Board::search_position_nnue(int depth)
-{
-	if (is_checkmate)
-	{
+__attribute__((hot)) uint64_t Board::search_position_nnue(int depth) {
+	if (is_checkmate) {
 		return 0;
 	}
 
@@ -17,6 +15,7 @@ __attribute__((hot)) uint64_t Board::search_position_nnue(int depth)
 	follow_pv = 0;
 	score_pv = 0;
 
+	// clang-format off
 	// Search (1) = 0.0303 ms, Nodes 21 -> 24 -> 24
 	// n -> n + 1 : mx exec time, Nodes : old_nodes -> new_nodes
 	// n is the depth, m is the time ratio of exec time from the previous time,
@@ -37,6 +36,7 @@ __attribute__((hot)) uint64_t Board::search_position_nnue(int depth)
 	// Search (10) = 2,233,790 ms = 2233.8 s = 37.23 mins = 0.62 hrs -> 31,177 ms -> 6007.48
 	// Average (excluding outliers) : ~5x exec time from n -> n + 1 search depth
 	// Node growth : ~5 times from n -> n + 1
+	// clang-format on
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -46,15 +46,13 @@ __attribute__((hot)) uint64_t Board::search_position_nnue(int depth)
 	int score = 0;
 
 	// iterative deepening
-	for (int current_depth = 1; current_depth <= depth; current_depth++)
-	{
+	for (int current_depth = 1; current_depth <= depth; current_depth++) {
 		// Enable follow_pv flag
 		follow_pv = 1;
 
 		score = negamax_nnue(alpha, beta, current_depth);
 
-		if ((score <= alpha) || (score >= beta))
-		{
+		if ((score <= alpha) || (score >= beta)) {
 			alpha = -50000;
 			beta = 50000;
 			continue;
@@ -68,25 +66,22 @@ __attribute__((hot)) uint64_t Board::search_position_nnue(int depth)
 	std::chrono::duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << ms_double.count() << "\n";
 
-	Move move_x = Move(pv_table[0][0]);
+	Move		move_x = Move(pv_table[0][0]);
 	std::string pgn = "";
 	move_x.to_pgn(pgn, diff_calc(pv_table[0][0]));
-	if (score > -49000 && score < -48000)
-	{
+	if (score > -49000 && score < -48000) {
 		std::cout << "Best Move : " << pgn << "\n"
 				  << "Eval : Mate in " << (score + 49000) / 2 - 1 << "\n"
 				  << "Nodes : " << nodes << "\n"
 				  << "Depth : " << depth << "\n";
 	}
-	else if (score > 48000 && score < 49000)
-	{
+	else if (score > 48000 && score < 49000) {
 		std::cout << "Best Move : " << pgn << "\n"
 				  << "Eval : Mate in " << (49000 - score) / 2 + 1 << "\n"
 				  << "Nodes : " << nodes << "\n"
 				  << "Depth : " << depth << "\n";
 	}
-	else
-	{
+	else {
 		std::cout << "Best Move : " << pgn << "\n"
 				  << "Eval : " << score << "\n"
 				  << "Nodes : " << nodes << "\n"
@@ -96,8 +91,7 @@ __attribute__((hot)) uint64_t Board::search_position_nnue(int depth)
 	return pv_table[0][0];
 }
 
-int Board::negamax_nnue(int alpha, int beta, int depth)
-{
+int Board::negamax_nnue(int alpha, int beta, int depth) {
 	pv_length[ply] = ply;
 
 	// Static evaluation
@@ -107,8 +101,7 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 
 	uint64_t best_move = 0;
 
-	if (ply && is_repetition() || half_moves > 50)
-	{
+	if (ply && is_repetition() || half_moves > 50) {
 		return 0;
 	}
 
@@ -116,8 +109,7 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 
 	score = read_hash_entry(alpha, beta, depth, &best_move);
 
-	if (ply && score != no_hash_found && (!pv_node))
-	{
+	if (ply && score != no_hash_found && (!pv_node)) {
 		return score;
 	}
 
@@ -127,8 +119,7 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 		return quiescence_nnue(alpha, beta);
 
 	//
-	if (ply > MAX_PLY - 1)
-	{
+	if (ply > MAX_PLY - 1) {
 		return nnue_eval();
 	}
 
@@ -136,39 +127,36 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 	nodes++;
 
 	// is king in check
-	int in_check = is_square_attacked((side == white) ? get_ls1b_index(bitboards[K]) : get_ls1b_index(bitboards[k]),
-									  side ^ 1);
+	int in_check =
+		is_square_attacked((side == white) ? get_ls1b_index(bitboards[K])
+										   : get_ls1b_index(bitboards[k]),
+			side ^ 1);
 
 	// increase search depth if the king has been exposed into a check
-	if (in_check)
-		depth++;
+	if (in_check) depth++;
 
 	// legal moves counter
 	int legal_moves = 0;
 
 	int static_eval = nnue_eval();
 
-	if (depth < 3 && !pv_node && !in_check && (abs(beta - 1) > -50000 + 100))
-	{
+	if (depth < 3 && !pv_node && !in_check && (abs(beta - 1) > -50000 + 100)) {
 		int eval_margin = 120 * depth;
 
-		if (static_eval - eval_margin >= beta)
-		{
+		if (static_eval - eval_margin >= beta) {
 			return (static_eval - eval_margin);
 		}
 	}
 
 	// Null Move Pruning
-	if (depth >= 3 && in_check == 0 && ply && !null_move_made)
-	{
+	if (depth >= 3 && in_check == 0 && ply && !null_move_made) {
 		copy_board();
 
 		side ^= 1;
 
 		curr_zobrist_hash ^= zobrist_side_key;
 
-		if (en_passant_sq != no_sq)
-		{
+		if (en_passant_sq != no_sq) {
 			curr_zobrist_hash ^= en_passant_zobrist[en_passant_sq];
 		}
 
@@ -188,29 +176,23 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 
 		take_back();
 
-		if (score >= beta)
-		{
+		if (score >= beta) {
 			return beta;
 		}
 	}
-	else
-	{
-		if (null_move_made)
-		{
+	else {
+		if (null_move_made) {
 			null_move_made = false;
 		}
 	}
 
-	if (!pv_node && !in_check && depth <= 3)
-	{
+	if (!pv_node && !in_check && depth <= 3) {
 		score = static_eval + 125;
 
 		int new_score = 0;
 
-		if (score < beta)
-		{
-			if (depth == 1)
-			{
+		if (score < beta) {
+			if (depth == 1) {
 				new_score = quiescence_nnue(alpha, beta);
 
 				return (new_score > score) ? new_score : score;
@@ -219,12 +201,10 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 
 		score += 175;
 
-		if (score < beta && depth <= 2)
-		{
+		if (score < beta && depth <= 2) {
 			new_score = quiescence_nnue(alpha, beta);
 
-			if (new_score < beta)
-			{
+			if (new_score < beta) {
 				return (new_score > score) ? new_score : score;
 			}
 		}
@@ -241,8 +221,7 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 	// 	std::cout << move_list->moves[i] << "\n";
 	// }
 
-	if (follow_pv)
-	{
+	if (follow_pv) {
 		enable_pv(move_list);
 	}
 
@@ -252,8 +231,7 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 	int moves_searched = 0;
 
 	// loop over moves within a movelist
-	for (int count = 0; count < move_list->count; count++)
-	{
+	for (int count = 0; count < move_list->count; count++) {
 		// preserve board state
 		copy_board();
 
@@ -264,8 +242,7 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 		repetition_table[repetition_index] = curr_zobrist_hash;
 
 		// make sure to make only legal moves
-		if (make_move(move_list->moves[count], all_moves) == 0)
-		{
+		if (make_move(move_list->moves[count], all_moves) == 0) {
 			// decrement ply
 			ply--;
 
@@ -277,27 +254,25 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 		// increment legal moves
 		legal_moves++;
 
-		if (moves_searched == 0)
-		{
+		if (moves_searched == 0) {
 
 			score = -negamax_nnue(-beta, -alpha, depth - 1);
 		}
-		else
-		{
-			if (moves_searched >= full_depth_moves && ply >= reduction_limit && in_check == 0 && get_move_capture(move_list->moves[count]) == 0 && get_move_promoted(move_list->moves[count]) == 0)
+		else {
+			if (moves_searched >= full_depth_moves && ply >= reduction_limit &&
+				in_check == 0 &&
+				get_move_capture(move_list->moves[count]) == 0 &&
+				get_move_promoted(move_list->moves[count]) == 0)
 			{
 				score = -negamax_nnue(-alpha - 1, -alpha, depth - 2);
 			}
-			else
-			{
+			else {
 				score = alpha + 1;
 			}
 
-			if (score > alpha)
-			{
+			if (score > alpha) {
 				score = -negamax_nnue(-alpha - 1, -alpha, depth - 1);
-				if ((score > alpha) && (score < beta))
-				{
+				if ((score > alpha) && (score < beta)) {
 					score = -negamax_nnue(-beta, -alpha, depth - 1);
 				}
 			}
@@ -313,37 +288,35 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 		moves_searched++;
 
 		// found a better move
-		if (score > alpha)
-		{
+		if (score > alpha) {
 
 			hash_flag = hash_flag_exact;
 
 			best_move = move_list->moves[count];
 
-			if (get_move_capture(move_list->moves[count]) == 0)
-			{
-				history_moves[get_move_piece(move_list->moves[count])][get_move_target(move_list->moves[count])] += depth;
+			if (get_move_capture(move_list->moves[count]) == 0) {
+				history_moves[get_move_piece(move_list->moves[count])]
+							 [get_move_target(move_list->moves[count])] +=
+					depth;
 			}
 			// PV node (move)
 			alpha = score;
 
 			pv_table[ply][ply] = move_list->moves[count];
 
-			for (int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++)
-			{
+			for (int next_ply = ply + 1; next_ply < pv_length[ply + 1];
+				 next_ply++) {
 				pv_table[ply][next_ply] = pv_table[ply + 1][next_ply];
 			}
 
 			pv_length[ply] = pv_length[ply + 1];
 
 			// fail-hard beta cutoff
-			if (score >= beta)
-			{
+			if (score >= beta) {
 
 				set_entry(beta, depth, hash_flag_beta, best_move);
 
-				if (get_move_capture(move_list->moves[count]) == 0)
-				{
+				if (get_move_capture(move_list->moves[count]) == 0) {
 					killer_moves[1][ply] = killer_moves[0][ply];
 					killer_moves[0][ply] = move_list->moves[count];
 				}
@@ -355,11 +328,11 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 	}
 
 	// we don't have any legal moves to make in the current postion
-	if (legal_moves == 0)
-	{
+	if (legal_moves == 0) {
 		// king is in check
 		if (in_check)
-			// return mating score (assuming closest distance to mating position)
+			// return mating score (assuming closest distance to mating
+			// position)
 			return -49000 + ply;
 
 		// king is not in check
@@ -374,13 +347,11 @@ int Board::negamax_nnue(int alpha, int beta, int depth)
 	return alpha;
 }
 
-int Board::quiescence_nnue(int alpha, int beta)
-{
+int Board::quiescence_nnue(int alpha, int beta) {
 	// increment nodes count
 	nodes++;
 
-	if (ply > MAX_PLY - 1)
-	{
+	if (ply > MAX_PLY - 1) {
 		return nnue_eval();
 	}
 
@@ -388,8 +359,7 @@ int Board::quiescence_nnue(int alpha, int beta)
 	int evaluation = nnue_eval();
 
 	// fail-hard beta cutoff
-	if (evaluation >= beta)
-	{
+	if (evaluation >= beta) {
 		// node (move) fails high
 		return beta;
 	}
@@ -397,28 +367,22 @@ int Board::quiescence_nnue(int alpha, int beta)
 	// Delta Pruning
 	int delta = 975;
 
-	if (side == white)
-	{
-		if (bitboards[0] & row_7)
-		{
+	if (side == white) {
+		if (bitboards[0] & row_7) {
 			delta += 775;
 		}
 	}
-	else
-	{
-		if (bitboards[6] & row_1)
-		{
+	else {
+		if (bitboards[6] & row_1) {
 			delta += 775;
 		}
 	}
 
-	if (evaluation < alpha - delta)
-	{
+	if (evaluation < alpha - delta) {
 		return alpha;
 	}
 
-	if (evaluation > alpha)
-	{
+	if (evaluation > alpha) {
 		alpha = evaluation;
 	}
 
@@ -432,8 +396,7 @@ int Board::quiescence_nnue(int alpha, int beta)
 	sort_moves(move_list, 0);
 
 	// loop over moves within a movelist
-	for (int count = 0; count < move_list->count; count++)
-	{
+	for (int count = 0; count < move_list->count; count++) {
 
 		// preserve board state
 		copy_board();
@@ -445,8 +408,7 @@ int Board::quiescence_nnue(int alpha, int beta)
 		repetition_table[repetition_index] = curr_zobrist_hash;
 
 		// make sure to make only legal moves
-		if (make_move(move_list->moves[count], all_moves) == 0)
-		{
+		if (make_move(move_list->moves[count], all_moves) == 0) {
 			// decrement ply
 			ply--;
 
@@ -467,13 +429,11 @@ int Board::quiescence_nnue(int alpha, int beta)
 		take_back();
 
 		// found a better move
-		if (score > alpha)
-		{
+		if (score > alpha) {
 			// PV node (move)
 			alpha = score;
 			// fail-hard beta cutoff
-			if (score >= beta)
-			{
+			if (score >= beta) {
 				// node (move) fails high
 				return beta;
 			}
@@ -484,8 +444,7 @@ int Board::quiescence_nnue(int alpha, int beta)
 	return alpha;
 }
 
-int Board::nnue_eval()
-{
+int Board::nnue_eval() {
 	uint64_t bitboard;
 
 	int piece, square;
@@ -496,29 +455,24 @@ int Board::nnue_eval()
 
 	int index = 2;
 
-	for (int bb_piece = P; bb_piece <= k; bb_piece++)
-	{
+	for (int bb_piece = P; bb_piece <= k; bb_piece++) {
 		bitboard = bitboards[bb_piece];
 
-		while (bitboard)
-		{
+		while (bitboard) {
 			piece = bb_piece;
 
 			square = get_ls1b_index(bitboard);
 
-			if (piece == K)
-			{
+			if (piece == K) {
 				pieces[0] = nnue_pieces[piece];
 				squares[0] = nnue_squares[square];
 			}
-			else if (piece == k)
-			{
+			else if (piece == k) {
 				pieces[1] = nnue_pieces[piece];
 				squares[1] = nnue_squares[square];
 			}
 
-			else
-			{
+			else {
 				pieces[index] = nnue_pieces[piece];
 				squares[index] = nnue_squares[square];
 				index++;
@@ -534,7 +488,6 @@ int Board::nnue_eval()
 	return (evaluate_nnue(side, pieces, squares) * (100 - half_moves) / 100);
 }
 
-void Board::enable_nnue(bool use_nnue)
-{
+void Board::enable_nnue(bool use_nnue) {
 	this->use_nnue = use_nnue;
 }

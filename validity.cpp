@@ -1,10 +1,9 @@
 #include "Board.h"
 
-bool Board::populate_move(Move &move)
-{
-	uint64_t *pieces = ((side == white) ? &bitboards[0] : &bitboards[6]);
-	uint64_t *opp_pieces = ((side == white) ? &bitboards[6] : &bitboards[0]);
-	bool found = false;
+bool Board::populate_move(Move &move) {
+	uint64_t* pieces = ((side == white) ? &bitboards[0] : &bitboards[6]);
+	uint64_t* opp_pieces = ((side == white) ? &bitboards[6] : &bitboards[0]);
+	bool	  found = false;
 	move.piece = -1;
 	move.promoted = 0;
 	move.capture_flag = 0;
@@ -13,70 +12,67 @@ bool Board::populate_move(Move &move)
 	move.en_passant_flag = 0;
 	move.move_id = 0;
 	move.capture_piece = 12;
-	for (int i = 0; i < 6; i++)
-	{
-		if (move.piece == -1 || move.capture_flag == 0)
-		{
-			if ((*(pieces + i) & (1ULL << move.square_from)) && move.piece == -1)
-			{
+	for (int i = 0; i < 6; i++) {
+		if (move.piece == -1 || move.capture_flag == 0) {
+			if ((*(pieces + i) & (1ULL << move.square_from)) &&
+				move.piece == -1) {
 				move.piece = ((side == white) ? i : i + 6);
 				found = true;
 			}
 
-			if ((*(opp_pieces + i) & (1ULL << move.square_to)))
-			{
+			if ((*(opp_pieces + i) & (1ULL << move.square_to))) {
 				move.capture_flag = 1;
 				move.capture_piece = (side == white ? i + 6 : i);
 			}
 		}
 	}
-	if (!found)
-	{
+	if (!found) {
 		return false;
 	}
 
 	int promotion_piece = -1;
-	if ((move.piece % 6 == 0) && (move.square_from / 8 == ((side == white) ? 1 : 6)))
+	if ((move.piece % 6 == 0) &&
+		(move.square_from / 8 == ((side == white) ? 1 : 6)))
 	{
-		if (promotion_piece == -1)
-		{
+		if (promotion_piece == -1) {
 			promotion_piece = ((side == white) ? 4 : 10);
 		}
 		move.promoted = promotion_piece;
 	}
 
-	if (move.piece % 6 == 5 && ((move.square_to - move.square_from == 2) || (move.square_from - move.square_to == 2)))
+	if (move.piece % 6 == 5 &&
+		((move.square_to - move.square_from == 2) ||
+			(move.square_from - move.square_to == 2)))
 	{
 		move.castle_flag = 1;
 	}
 
-	if (move.capture_flag == 0 && move.piece % 6 == 0 && (move.square_to == en_passant_sq))
+	if (move.capture_flag == 0 && move.piece % 6 == 0 &&
+		(move.square_to == en_passant_sq))
 	{
 		move.capture_flag = 1;
 		move.en_passant_flag = 1;
 		move.capture_piece = (side == white ? 6 : 0);
 	}
 
-	if (move.piece % 6 == 0)
-	{
-		if (side == white && (move.square_from - move.square_to == 16))
-		{
+	if (move.piece % 6 == 0) {
+		if (side == white && (move.square_from - move.square_to == 16)) {
 			move.double_flag = 1;
 		}
-		if (side == black && (move.square_to - move.square_from == 16))
-		{
+		if (side == black && (move.square_to - move.square_from == 16)) {
 			move.double_flag = 1;
 		}
 	}
 
-	move.move_id = ((move.square_from) | (move.square_to << 6) | (move.piece << 12) | (move.promoted << 16) | (move.capture_flag << 20) | (move.double_flag << 21) | (move.en_passant_flag << 22) | (move.castle_flag << 23) | (move.capture_piece << 24));
+	move.move_id = ((move.square_from) | (move.square_to << 6) |
+		(move.piece << 12) | (move.promoted << 16) | (move.capture_flag << 20) |
+		(move.double_flag << 21) | (move.en_passant_flag << 22) |
+		(move.castle_flag << 23) | (move.capture_piece << 24));
 	return true;
 }
 
-int Board::is_square_attacked(int square, int side)
-{
-	if (square < 0 || square > 63)
-	{
+int Board::is_square_attacked(int square, int side) {
+	if (square < 0 || square > 63) {
 		return 0;
 	}
 
@@ -88,19 +84,23 @@ int Board::is_square_attacked(int square, int side)
 		return 1;
 
 	// attacked by knights
-	if (knight_attacks[square] & ((side == white) ? bitboards[N] : bitboards[n]))
+	if (knight_attacks[square] &
+		((side == white) ? bitboards[N] : bitboards[n]))
 		return 1;
 
 	// attacked by bishops
-	if (get_bishop_attacks(square, occupancies[both]) & ((side == white) ? bitboards[B] : bitboards[b]))
+	if (get_bishop_attacks(square, occupancies[both]) &
+		((side == white) ? bitboards[B] : bitboards[b]))
 		return 1;
 
 	// attacked by rooks
-	if (get_rook_attacks(square, occupancies[both]) & ((side == white) ? bitboards[R] : bitboards[r]))
+	if (get_rook_attacks(square, occupancies[both]) &
+		((side == white) ? bitboards[R] : bitboards[r]))
 		return 1;
 
 	// attacked by bishops
-	if (get_queen_attacks(square, occupancies[both]) & ((side == white) ? bitboards[Q] : bitboards[q]))
+	if (get_queen_attacks(square, occupancies[both]) &
+		((side == white) ? bitboards[Q] : bitboards[q]))
 		return 1;
 
 	// attacked by kings
@@ -111,11 +111,9 @@ int Board::is_square_attacked(int square, int side)
 	return 0;
 }
 
-int Board::make_move(uint64_t move, int move_flag)
-{
+int Board::make_move(uint64_t move, int move_flag) {
 	// quiet moves
-	if (move_flag == all_moves)
-	{
+	if (move_flag == all_moves) {
 		// preserve board state
 		copy_board();
 
@@ -140,25 +138,23 @@ int Board::make_move(uint64_t move, int move_flag)
 
 		half_moves++;
 
-		if (piece == P || piece == p)
-		{
+		if (piece == P || piece == p) {
 			half_moves = 0;
 		}
 
 		// handling capture moves
-		if (capture)
-		{
+		if (capture) {
 			pop_bit(bitboards[capture_piece], target_square);
 			curr_zobrist_hash ^= zobrist_keys[capture_piece][target_square];
 			half_moves = 0;
 		}
 
 		// handle pawn promotions
-		if (promoted_piece)
-		{
+		if (promoted_piece) {
 			// erase the pawn from the target square
 			pop_bit(bitboards[(side == white) ? P : p], target_square);
-			curr_zobrist_hash ^= zobrist_keys[(side == white) ? P : p][target_square];
+			curr_zobrist_hash ^=
+				zobrist_keys[(side == white) ? P : p][target_square];
 
 			// set up promoted piece on chess board
 			set_bit(bitboards[promoted_piece], target_square);
@@ -166,30 +162,31 @@ int Board::make_move(uint64_t move, int move_flag)
 		}
 
 		// handle enpassant captures
-		if (enpass)
-		{
+		if (enpass) {
 			// erase the pawn depending on side to move
-			(side == white) ? pop_bit(bitboards[p], target_square + 8) : pop_bit(bitboards[P], target_square - 8);
-			curr_zobrist_hash ^= zobrist_keys[(side == white) ? p : P][(side == white) ? target_square + 8 : target_square - 8];
+			(side == white) ? pop_bit(bitboards[p], target_square + 8)
+							: pop_bit(bitboards[P], target_square - 8);
+			curr_zobrist_hash ^=
+				zobrist_keys[(side == white) ? p : P]
+							[(side == white) ? target_square + 8
+											 : target_square - 8];
 		}
 
 		// reset enpassant square
 		en_passant_sq = no_sq;
 
 		// handle double pawn push
-		if (double_push)
-		{
+		if (double_push) {
 			// set enpassant aquare depending on side to move
-			(side == white) ? (en_passant_sq = target_square + 8) : (en_passant_sq = target_square - 8);
+			(side == white) ? (en_passant_sq = target_square + 8)
+							: (en_passant_sq = target_square - 8);
 			curr_zobrist_hash ^= en_passant_zobrist[en_passant_sq];
 		}
 
 		// handle castling moves
-		if (castling)
-		{
+		if (castling) {
 			// switch target square
-			switch (target_square)
-			{
+			switch (target_square) {
 			// white castles king side
 			case (g1):
 				// move H rook
@@ -240,8 +237,7 @@ int Board::make_move(uint64_t move, int move_flag)
 		memset(occupancies, 0ULL, 24);
 
 		// loop over white pieces bitboards
-		for (int bb_piece = P; bb_piece <= K; bb_piece++)
-		{
+		for (int bb_piece = P; bb_piece <= K; bb_piece++) {
 			// update white occupancies
 			occupancies[white] |= bitboards[bb_piece];
 
@@ -257,7 +253,9 @@ int Board::make_move(uint64_t move, int move_flag)
 		curr_zobrist_hash ^= zobrist_side_key;
 
 		// make sure that king has not been exposed into a check
-		if (is_square_attacked((side == white) ? get_ls1b_index(bitboards[k]) : get_ls1b_index(bitboards[K]), side))
+		if (is_square_attacked((side == white) ? get_ls1b_index(bitboards[k])
+											   : get_ls1b_index(bitboards[K]),
+				side))
 		{
 			// take move back
 			take_back();
@@ -267,19 +265,16 @@ int Board::make_move(uint64_t move, int move_flag)
 		}
 
 		//
-		else
-		{
+		else {
 			// return legal move
 			return 1;
 		}
 	}
 
 	// capture moves
-	else
-	{
+	else {
 		// make sure move is a capture
-		if (get_move_capture(move))
-			make_move(move, all_moves);
+		if (get_move_capture(move)) make_move(move, all_moves);
 
 		// otherwise the move is not a capture
 		else
@@ -289,8 +284,7 @@ int Board::make_move(uint64_t move, int move_flag)
 	return 1;
 }
 
-void Board::update_log(uint64_t move)
-{
+void Board::update_log(uint64_t move) {
 	Move move_x = Move(move);
 	move_log[move_index] = move;
 	std::string pgn = "";
@@ -300,20 +294,17 @@ void Board::update_log(uint64_t move)
 	std::cout << pgn << "\n";
 }
 
-void Board::update_game_state()
-{
+void Board::update_game_state() {
 	moves move_list[1];
 	generate_moves(move_list);
 
 	int legal_moves = 0;
 
-	for (int i = 0; i < move_list->count; i++)
-	{
+	for (int i = 0; i < move_list->count; i++) {
 
 		copy_board();
 
-		if (make_move(move_list->moves[i], 0) != 0)
-		{
+		if (make_move(move_list->moves[i], 0) != 0) {
 			legal_moves++;
 			take_back();
 			break;
@@ -322,21 +313,20 @@ void Board::update_game_state()
 		take_back();
 	}
 
-	if (legal_moves == 0)
-	{
-		if (is_square_attacked((side == white) ? get_ls1b_index(bitboards[K]) : get_ls1b_index(bitboards[k]), side ^ 1))
+	if (legal_moves == 0) {
+		if (is_square_attacked((side == white) ? get_ls1b_index(bitboards[K])
+											   : get_ls1b_index(bitboards[k]),
+				side ^ 1))
 		{
 			is_checkmate = true;
 			return;
 		}
-		else
-		{
+		else {
 			is_stalemate = true;
 			return;
 		}
 	}
-	else
-	{
+	else {
 		is_checkmate = false;
 		is_stalemate = false;
 	}
@@ -346,60 +336,41 @@ void Board::update_game_state()
 	return;
 }
 
-int Board::diff_calc(uint64_t move)
-{
-	int diff = 0;
-	int piece_moved = get_move_piece(move);
+int Board::diff_calc(uint64_t move) {
+	int		 diff = 0;
+	int		 piece_moved = get_move_piece(move);
 	uint64_t temp_val = bitboards[piece_moved];
-	int square_from = get_move_source(move);
-	int rank_diff = -1;
-	int file_diff = -1;
-	while (temp_val)
-	{
-		int pos = get_ls1b_index(temp_val);
+	int		 square_from = get_move_source(move);
+	int		 rank_diff = -1;
+	int		 file_diff = -1;
+	while (temp_val) {
+		int		 pos = get_ls1b_index(temp_val);
 		uint64_t attacks = 0ULL;
-		if (pos != square_from)
-		{
-			switch (piece_moved % 6)
-			{
+		if (pos != square_from) {
+			switch (piece_moved % 6) {
 			case P:
-				if (piece_moved < 6)
-				{
+				if (piece_moved < 6) {
 					attacks = pawn_attacks[white][pos];
 				}
-				else
-				{
+				else {
 					attacks = pawn_attacks[black][pos];
 				}
 				break;
-			case N:
-				attacks = knight_attacks[pos];
-				break;
-			case B:
-				attacks = get_bishop_attacks(pos, occupancies[both]);
-				break;
-			case R:
-				attacks = get_rook_attacks(pos, occupancies[both]);
-				break;
-			case Q:
-				attacks = get_queen_attacks(pos, occupancies[both]);
-				break;
-			case K:
-				attacks = king_attacks[pos];
-				break;
-			default:
-				break;
+			case N: attacks = knight_attacks[pos]; break;
+			case B: attacks = get_bishop_attacks(pos, occupancies[both]); break;
+			case R: attacks = get_rook_attacks(pos, occupancies[both]); break;
+			case Q: attacks = get_queen_attacks(pos, occupancies[both]); break;
+			case K: attacks = king_attacks[pos]; break;
+			default: break;
 			}
 		}
 
-		if (get_bit(attacks, get_move_target(move)))
-		{
-			if ((pos % 8 != square_from) && (pos / 8 == square_from / 8))
-			{
+		if (get_bit(attacks, get_move_target(move))) {
+			if ((pos % 8 != square_from) && (pos / 8 == square_from / 8)) {
 				file_diff = 1;
 			}
-			else if ((pos / 8 != square_from / 8) && (pos % 8 == square_from % 8))
-			{
+			else if ((pos / 8 != square_from / 8) &&
+				(pos % 8 == square_from % 8)) {
 				rank_diff = 1;
 			}
 		}
@@ -407,30 +378,24 @@ int Board::diff_calc(uint64_t move)
 		pop_bit(temp_val, pos);
 	}
 
-	if (rank_diff == 1 && file_diff == 1)
-	{
+	if (rank_diff == 1 && file_diff == 1) {
 		diff = 3;
 	}
-	else if (file_diff == 1)
-	{
+	else if (file_diff == 1) {
 		diff = 1;
 	}
-	else if (rank_diff == 1)
-	{
+	else if (rank_diff == 1) {
 		diff = 2;
 	}
 
 	return diff;
 }
 
-int Board::check_validity(uint64_t move)
-{
+int Board::check_validity(uint64_t move) {
 	moves move_list[1];
 	generate_moves(move_list);
-	for (int count = 0; count < move_list->count; count++)
-	{
-		if (move == move_list->moves[count])
-		{
+	for (int count = 0; count < move_list->count; count++) {
+		if (move == move_list->moves[count]) {
 			return 1;
 		}
 	}
@@ -438,15 +403,14 @@ int Board::check_validity(uint64_t move)
 	return 0;
 }
 
-void Board::legalize_player_moves(moves *player_moves, moves *pseudo_legal_moves)
-{
+void Board::legalize_player_moves(
+	moves* player_moves, moves* pseudo_legal_moves) {
 	player_moves->count = 0;
-	for (int i = 0; i < pseudo_legal_moves->count; i++)
-	{
+	for (int i = 0; i < pseudo_legal_moves->count; i++) {
 		copy_board();
-		if (make_move(pseudo_legal_moves->moves[i], all_moves))
-		{
-			player_moves->moves[player_moves->count] = pseudo_legal_moves->moves[i];
+		if (make_move(pseudo_legal_moves->moves[i], all_moves)) {
+			player_moves->moves[player_moves->count] =
+				pseudo_legal_moves->moves[i];
 			player_moves->count++;
 		}
 		take_back();
