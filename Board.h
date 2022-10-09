@@ -632,7 +632,8 @@ class Board
 	int double_pawn_penalty = -10;
 	int isolated_pawn_penalty = -10;
 	// passed pawn bonus
-	const int passed_pawn_bonus[8] = { 0, 5, 15, 20, 50, 70, 110, 160 };
+	const int passed_pawn_bonus[8] = { 0, 5, 15, 20, 50,
+	70, 110, 160 };
 	// Open/Semi-Open File Bonuses
 	const int semi_open_file_score = 10;
 	const int open_file_score = 25;

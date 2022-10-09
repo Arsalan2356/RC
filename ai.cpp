@@ -98,8 +98,7 @@ int Board::evaluate() {
 					mg_score += open_file_score;
 					eg_score += open_file_score;
 				}
-
-				if ((bitboards[P] & file_masks[square]) == 0) {
+				else if ((bitboards[P] & file_masks[square]) == 0) {
 					mg_score += semi_open_file_score;
 					eg_score += semi_open_file_score;
 				}
@@ -267,11 +266,12 @@ __attribute__((hot)) uint64_t Board::search_position(int depth) {
 		if ((score <= alpha) || (score >= beta)) {
 			alpha = -50000;
 			beta = 50000;
-			continue;
 		}
-
-		alpha = score - 50;
-		beta = score + 50;
+		else {
+			alpha = score - 50;
+			beta = score + 50;
+		}
+	
 	}
 
 	auto t2 = std::chrono::high_resolution_clock::now();
@@ -872,7 +872,7 @@ void Board::init_evaluation_masks() {
 			black_passed_pawn_masks[sq] |= set_file_rank_mask(f + 1, -1);
 
 			for (int j = 0; j < r + 1; j++) {
-				white_passed_pawn_masks[sq] &= ~rank_masks[j * 8 + f];
+				black_passed_pawn_masks[sq] &= ~rank_masks[j * 8 + f];
 			}
 		}
 	}
